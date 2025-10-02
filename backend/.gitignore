@@ -1,0 +1,25 @@
+# Node dependencies
+node_modules/
+
+# Build outputs
+dist/
+
+# Env files (chỉ giữ .env.example để làm mẫu)
+.env
+.env.local
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+logs/
+*.log
+
+# OS-specific
+.DS_Store
+Thumbs.db
+
+# Editor-specific
+.vscode/
+.idea/
