@@ -1,4 +1,4 @@
-Để chạy backend hãy:
+Để chạy backend hãy vào folder backend -> cd backend:
 
 Cài package:
 
