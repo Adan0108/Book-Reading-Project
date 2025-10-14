@@ -3,11 +3,16 @@
     "rootDir": "src",
     "outDir": "dist",
 
-    "module": "commonjs",
-    "moduleResolution": "node",
+    "allowJs": true,
+
+    // "module": "commonjs",
+    "module": "node16",
+    "moduleResolution": "node16",
     "target": "ES2020",
     "lib": ["ES2020"],
     "types": ["node"],
+
+    // "ignoreDeprecations": "6.0", //to silence the error from the deprecated moduleResolution
 
     "sourceMap": true,
     "declaration": true,

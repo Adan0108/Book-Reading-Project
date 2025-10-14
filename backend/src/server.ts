@@ -1,11 +1,21 @@
-import "dotenv/config";
-import app from "./app";
+// src/server.ts
 
-const PORT = Number(process.env.PORT || 3000);
-const server = app.listen(PORT, () => {
-  console.log(`Server listening at http://localhost:${PORT}`);
-});
+import 'dotenv/config'; // MUST BE THE VERY FIRST IMPORT
+import app from './app';
+import { pingMySQL } from './dbs/init.mysql';
+import { redisService } from './dbs/init.redis';
+// All other imports must come AFTER dotenv/config
 
-process.on("SIGINT", () => {
-  server.close(() => console.log("Exit Server Express"));
-});
+const PORT = process.env.PORT || 5000;
+
+const startServer = async () => {
+  // You can initialize your DB connections here
+  await pingMySQL();
+  await redisService.connect();
+
+  app.listen(PORT, () => {
+    console.log(`Server is running on port ${PORT}`);
+  });
+};
+
+startServer();
