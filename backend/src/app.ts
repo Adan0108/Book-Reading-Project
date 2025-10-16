@@ -5,7 +5,7 @@ import morgan from "morgan";
 import compression from "compression";
 import { v4 as uuidv4 } from "uuid";
 import routes from "./routes";
-
+import { runMigrationsOnce } from "./dbs/migrate";
 import { pingMySQL } from "./dbs/init.mysql";
 import { initRedis } from "./dbs/init.redis";
 
@@ -14,6 +14,7 @@ const app = express();
 (async function initDatastores() {
   try {
     await pingMySQL();              // log: [MySQL] ping OK
+    await runMigrationsOnce();
   } catch (e) {
     console.error("[MySQL] init failed:", (e as Error).message);
   }
