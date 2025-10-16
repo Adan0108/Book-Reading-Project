@@ -1,7 +1,8 @@
 import { Router } from "express";
+import accessRouter from "./access";
+
 const router = Router();
 
-// ví dụ route demo
-router.get("/v1/api/health", (_req, res) => res.json({ ok: true }));
+router.use("/v1/api/access", accessRouter);
 
 export default router;

@@ -45,10 +45,24 @@ app.use((_req: Request, _res: Response, next: NextFunction) => {
 
 // error handler
 app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
-  res.status(err.status || 500).json({
+  const status = err.status || 500;
+  const response: any = {
     status: "error",
-    message: err.message || "Internal Server Error"
-  });
+    message: err.message || "Internal Server Error",
+  };
+
+  // show stack only in development
+  if (process.env.NODE_ENV === "development") {
+    response.stack = err.stack;
+  }
+
+  console.error(`[ERROR] ${err.message}`);
+  if (process.env.NODE_ENV === "development") {
+    console.error(err.stack);
+  }
+
+  res.status(status).json(response);
 });
+
 
 export default app;
