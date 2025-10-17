@@ -4,6 +4,7 @@ import asyncHandler from "../helpers/asyncHandler";
 import { getByUserId } from "../models/repositories/userKeys.repo";
 import { getRedis } from "../dbs/init.redis";
 import { AuthFailureError, NotFoundError, RedisErrorResponse } from "../core/error.response";
+import { rtCookieName } from "../utils/cookieOptions";
 
 /** request header names */
 export const HEADER = {
@@ -124,9 +125,8 @@ export const requireRefreshToken = asyncHandler(async (req, _res, next) => {
   const keyPair = await getByUserId(userId);
   if (!keyPair) throw new NotFoundError("Key pair not found");
 
-  const rtHeader = req.headers[HEADER.REFRESHTOKEN];
-  if (!rtHeader) throw new AuthFailureError("Missing refresh token");
-  const rt = Array.isArray(rtHeader) ? rtHeader[0] : rtHeader;
+  const rt = req.cookies?.[rtCookieName];
+  if (!rt) throw new AuthFailureError("Missing refresh token cookie");
 
   const decoded = verifyJWT<AccessPayload>(rt, keyPair.private_key);
   if (decoded.uid !== userId) throw new AuthFailureError("Invalid user (RT)");
@@ -137,3 +137,4 @@ export const requireRefreshToken = asyncHandler(async (req, _res, next) => {
   req.keyStore = { publicKey: keyPair.public_key, privateKey: keyPair.private_key };
   next();
 });
+

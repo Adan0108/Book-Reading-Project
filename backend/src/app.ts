@@ -4,6 +4,8 @@ import helmet from "helmet";
 import morgan from "morgan";
 import compression from "compression";
 import { v4 as uuidv4 } from "uuid";
+import cookieParser from "cookie-parser";
+import cors from "cors";
 import routes from "./routes";
 import { runMigrationsOnce } from "./dbs/migrate";
 import { pingMySQL } from "./dbs/init.mysql";
@@ -32,7 +34,14 @@ app.use(helmet());
 app.use(compression());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+//
+app.use(cors({
+  origin:[process.env.FRONTEND_URL || "http://localhost:8000"],
+  credentials: true,
+}));
 
+
+app.use(cookieParser());
 // mount routes
 app.use("/", routes);
 
