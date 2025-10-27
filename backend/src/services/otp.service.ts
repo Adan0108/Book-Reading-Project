@@ -1,6 +1,7 @@
 import crypto from 'node:crypto';
 import bcrypt from 'bcrypt';
 import { findRecentOtpByType, createVerification } from '../models/repositories/user.repo';
+import sendMail from '../utils/sendMail';
 
 export const OTP_COOLDOWN_MINUTES = 1;
 
@@ -30,16 +31,37 @@ export const checkOtpCooldown = async (userId: number): Promise<number> => {
   return 0; // No cooldown
 };
 
+// /**
+//  * Mocks sending an OTP to the user's email.
+//  */
+// export const sendOtpEmail = async (email: string, otp: string) => {
+//   console.log(`
+//     ================================================
+//     Mock Email Sent to: ${email}
+//     Your account verification OTP is: ${otp}
+//     (This OTP will expire in 5 minutes)
+//     ================================================
+//   `);
+//   return true;
+// };
+
 /**
- * Mocks sending an OTP to the user's email.
+ * Sending an OTP to the user's email.
  */
 export const sendOtpEmail = async (email: string, otp: string) => {
-  console.log(`
-    ================================================
-    Mock Email Sent to: ${email}
-    Your account verification OTP is: ${otp}
-    (This OTP will expire in 5 minutes)
-    ================================================
-  `);
-  return true;
+  try {
+    await sendMail({
+      email: email,
+      subject: 'Your Verification Code - Book Project',
+      template: 'otp-mail.ejs',
+      data: {
+        email: email, // Pass the email to the template
+        otp: otp      // Pass the OTP to the template
+      }
+    });
+    return true;
+  } catch (error) {
+    console.error(`[OTP Service] Failed to send email via sendMail service:`, error);
+    return false;
+  }
 };
