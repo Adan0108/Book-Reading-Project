@@ -8,7 +8,7 @@ import * as ProfileRepo from "../models/repositories/userProfile.repo";
 import * as KeysRepo from "../models/repositories/userKeys.repo";
 import type { UserKeysRow } from "../models/repositories/userKeys.repo";
 import type { User } from "../models/user.model";
-import { AuthFailureError, BadRequestError } from "../core/error.response";
+import { AuthFailureError, BadRequestError, ConflictRequestError } from "../core/error.response";
 import { createTokenPair, revokeToken } from "../auth/checkAuth";
 import * as OtpService from "./otp.service";
 
@@ -55,7 +55,7 @@ export async function registerEmail(email: string) {
   if (user) {
     if (user.state === 1) {
       // state 1 = ACTIVE
-      throw new BadRequestError("Email already registered");
+      throw new ConflictRequestError("Email already registered");
     }
     // If user is state 0 (inactive) or 2 (pending password), we can proceed.
   }

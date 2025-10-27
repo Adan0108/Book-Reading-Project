@@ -36,19 +36,52 @@ export async function findActiveOtpByType(
 /**
  * Finds an OTP created after a specific time (for cooldown checks).
  */
-export async function findRecentOtpByType(
+// export async function findRecentOtpByType(
+//   userId: number,
+//   type: VerificationType,
+//   sinceDate: Date
+// ): Promise<UserVerification | null> {
+//   const [rows] = await pool.query(
+//     `SELECT * FROM user_verifications
+//      WHERE user_id = ? AND type = ? AND created_at > ?
+//      ORDER BY created_at DESC
+//      LIMIT 1`,
+//     [userId, type, sinceDate]
+//   );
+//   return (rows as any[])[0] ?? null;
+// }
+
+/**
+ * Checks for a recent OTP and returns the remaining cooldown seconds.
+ * RELIES ENTIRELY ON DATABASE TIME to prevent clock skew.
+ */
+export async function getRemainingCooldown(
   userId: number,
   type: VerificationType,
-  sinceDate: Date
-): Promise<UserVerification | null> {
+  cooldownMinutes: number
+): Promise<number> {
   const [rows] = await pool.query(
-    `SELECT * FROM user_verifications
-     WHERE user_id = ? AND type = ? AND created_at > ?
-     ORDER BY created_at DESC
-     LIMIT 1`,
-    [userId, type, sinceDate]
+    `
+    SELECT
+      -- Calculate remaining seconds, ensuring it's not negative
+      GREATEST(0, (? * 60) - TIMESTAMPDIFF(SECOND, created_at, NOW())) AS remaining_seconds
+    FROM user_verifications
+    WHERE
+      user_id = ? AND type = ?
+      -- Find any OTP created within the cooldown window
+      AND created_at > (NOW() - INTERVAL ? MINUTE)
+    ORDER BY created_at DESC
+    LIMIT 1
+    `,
+    [cooldownMinutes, userId, type, cooldownMinutes]
   );
-  return (rows as any[])[0] ?? null;
+
+  if ((rows as any[]).length === 0) {
+    return 0; // No recent OTP, so no cooldown
+  }
+
+  // Return the remaining seconds, rounded up
+  return Math.ceil((rows as any[])[0].remaining_seconds);
 }
 
 /**

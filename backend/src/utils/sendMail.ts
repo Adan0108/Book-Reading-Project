@@ -21,7 +21,7 @@ const sendMail = async (options: EmailOptions): Promise<void> => {
     },
   });
 
-  const { email, subject, template, data } = options;
+  const { email, subject, template, data} = options;
 
   //get the path to the email template file
   const templatePath = path.join(__dirname, "../mail-template", template);
@@ -35,11 +35,12 @@ const sendMail = async (options: EmailOptions): Promise<void> => {
       to: email,
       subject,
       html,
+      priority: 'high' as const
     };
 
     const info = await transporter.sendMail(mailOptions);
     console.log(`[Email] Message sent: ${info.messageId}`);
-    
+
   } catch (error) {
     console.error(`[Email] Error sending email:`, error);
     throw new Error("Failed to send email.");
