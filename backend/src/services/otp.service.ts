@@ -56,6 +56,6 @@ export const sendOtpEmail = async (email: string, otp: string) => {
     return true;
   } catch (error) {
     console.error(`[OTP Service] Failed to send email via sendMail service:`, error);
-    return false;
+    throw new Error('Failed to send verification email.');
   }
 };

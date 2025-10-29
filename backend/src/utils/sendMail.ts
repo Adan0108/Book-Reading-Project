@@ -10,40 +10,48 @@ interface EmailOptions {
   data: { [key: string]: any };
 }
 
-const sendMail = async (options: EmailOptions): Promise<void> => {
-  const transporter: Transporter = nodemailer.createTransport({
-    host: process.env.EMAIL_HOST,
-    port: Number(process.env.EMAIL_PORT),
-    secure: Number(process.env.EMAIL_PORT) === 465, // true for 465, false for other ports
-    auth: {
-      user: process.env.EMAIL_USER,
-      pass: process.env.EMAIL_PASSWORD,
-    },
-  });
+const toBool = (v?: string) => String(v).toLowerCase() === 'true';
 
-  const { email, subject, template, data} = options;
+const host = (process.env.EMAIL_HOST || '').trim();
+const port = Number((process.env.EMAIL_PORT || '465').trim());
+const secure = toBool(process.env.EMAIL_SECURE) || port === 465;
+const user = (process.env.EMAIL_USER || '').trim();
+const pass = (process.env.EMAIL_PASSWORD || '').trim();
+const from = (process.env.EMAIL_FROM || process.env.EMAIL_USER || '').trim();
+const allowSelfSigned = toBool(process.env.EMAIL_ALLOW_SELF_SIGNED);
 
-  //get the path to the email template file
-  const templatePath = path.join(__dirname, "../mail-template", template);
+const transporter: Transporter = nodemailer.createTransport({
+  host, 
+  port, 
+  secure, // true -> SMTPS(465), false -> STARTTLS(587)
+  auth: { user, pass },
+  tls: {
+    minVersion: 'TLSv1.2',
+    rejectUnauthorized: !allowSelfSigned, // <-- dev bypass
+    servername: host, // SNI
+  },
+  logger: true,
+  debug: true,
+});
+
+transporter.verify()
+.then(() => console.log(`[Email] Transport ready host=${host} port=${port} secure=${secure} allowSelfSigned=${allowSelfSigned}`))
+.catch(err => console.error('[Email] Transport verify failed:', err));
+
+export default async function sendMail({ email, subject, template, data }: EmailOptions): Promise<void> {
+  const templatePath = path.join(__dirname, '../mail-template', template);
   try {
-    //Render the email template with EJS
-    const html: string = await ejs.renderFile(templatePath, data);
-
-    //send the email
-    const mailOptions = {
-      from: process.env.EMAIL_USER,
-      to: email,
+    const html = await ejs.renderFile(templatePath, data);
+    const info = await transporter.sendMail({
+      from,
+      to: email.trim(),
       subject,
       html,
-      priority: 'high' as const
-    };
-
-    const info = await transporter.sendMail(mailOptions);
+      priority: 'high',
+    });
     console.log(`[Email] Message sent: ${info.messageId}`);
-
   } catch (error) {
-    console.error(`[Email] Error sending email:`, error);
-    throw new Error("Failed to send email.");
+    console.error('[Email] Error sending email:', error);
+    throw new Error('Failed to send email.');
   }
-};
-export default sendMail;
+}
