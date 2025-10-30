@@ -11,6 +11,8 @@ import type { User } from "../models/user.model";
 import { AuthFailureError, BadRequestError, ConflictRequestError } from "../core/error.response";
 import { createTokenPair, revokeToken } from "../auth/checkAuth";
 import * as OtpService from "./otp.service";
+import { getRedis } from '../dbs/init.redis';
+import { RedisErrorResponse } from '../core/error.response';
 
 /** Register:
  * - create user
@@ -18,7 +20,6 @@ import * as OtpService from "./otp.service";
  * - assign READER role
  * - generate per-user key pair
  * - return tokens
- */
 // export async function register(email: string, password: string): Promise<{
 //   user: Pick<User, "id" | "email">;
 //   tokens: { accessToken: string; refreshToken: string };
@@ -44,12 +45,20 @@ import * as OtpService from "./otp.service";
 //   const tokens = await createTokenPair({ uid: id, email }, publicKey, privateKey);
 //   return { user: { id, email: user.email }, tokens };
 // }
+ */
+
+// Check OTP attempts
+const MAX_OTP_ATTEMPTS = 10;
+const getOtpAttemptsKey = (userId: number) => `otp_attempts:${userId}:EMAIL_OTP`;
 
 /**
  * Step 1: Submit email, create inactive user, send OTP.
  */
 export async function registerEmail(email: string) {
   let user = await UserRepo.findByEmail(email);
+
+  const redisClient = getRedis();
+  if (!redisClient) throw new RedisErrorResponse("Redis not ready");
 
   // 1. Check if user already exists
   if (user) {
@@ -77,6 +86,9 @@ export async function registerEmail(email: string) {
   await UserRepo.createVerification(user.id, "EMAIL_OTP", otpHash, expiresAt);
   await OtpService.sendOtpEmail(email, otp);
 
+  // Reset the failed attempts counter
+  await redisClient.del(getOtpAttemptsKey(user.id));
+
   return {
     message: "Verification code sent to your email.",
     cooldown: OtpService.OTP_COOLDOWN_MINUTES * 60,
@@ -87,9 +99,19 @@ export async function registerEmail(email: string) {
  * Step 2: Verify email with OTP.
  */
 export async function verifyEmail(email: string, otp: string) {
+  const redisClient = getRedis();
+  if (!redisClient) throw new RedisErrorResponse("Redis not ready");
+
   const user = await UserRepo.findByEmail(email);
   if (!user || user.state !== 0) {
     throw new BadRequestError("User not found or has already been verified.");
+  }
+
+  const attemptsKey = getOtpAttemptsKey(user.id);
+
+  const attempts = Number(await redisClient.get(attemptsKey)) || 0; //check attempt count
+  if (attempts >= MAX_OTP_ATTEMPTS) {
+    throw new AuthFailureError("Too many failed OTP attempts. Please request a new code.");
   }
 
   const verification = await UserRepo.findActiveOtpByType(user.id, "EMAIL_OTP");
@@ -99,10 +121,29 @@ export async function verifyEmail(email: string, otp: string) {
 
   const isMatch = await bcrypt.compare(otp, verification.otp_hash!);
   if (!isMatch) {
-    throw new AuthFailureError("Invalid OTP.");
+    const newAttempts = await redisClient.incr(attemptsKey); // ++count
+    if (newAttempts === 1) {
+      // set the counter to expire when the OTP expires
+      const otpExpiry = new Date(verification.expires_at).getTime();
+      const now = Date.now();
+      const ttl = Math.floor((otpExpiry - now) / 1000);
+      if (ttl > 0) {
+        await redisClient.expire(attemptsKey, ttl);
+      }
+    }
+
+    // if the 10th one, delete the OTP from db
+    if (newAttempts >= MAX_OTP_ATTEMPTS) {
+      await UserRepo.invalidateActiveOtps(user.id, "EMAIL_OTP");
+      await redisClient.del(attemptsKey); // clean up
+      throw new AuthFailureError("Invalid OTP. Too many failed attempts. A new code is required.");
+    }
+
+    throw new AuthFailureError(`Invalid OTP. You have ${MAX_OTP_ATTEMPTS - newAttempts} attempts remaining.`);
   }
 
   // Success: Mark OTP as used and update user state to 2 (pending password)
+  await redisClient.del(attemptsKey); // clear the counter
   await UserRepo.markVerificationAsVerified(verification.id);
   await UserRepo.updateState(user.id, 2); // 2 = VERIFIED_PENDING_PASSWORD
 
@@ -158,6 +199,9 @@ export async function resendOtp(email: string) {
     throw new BadRequestError("Invalid user or account is already active.");
   }
 
+  const redisClient = getRedis();
+  if (!redisClient) throw new RedisErrorResponse("Redis not ready");
+
   // 1. Check for cooldown
   const remainingCooldown = await OtpService.checkOtpCooldown(user.id);
   if (remainingCooldown > 0) {
@@ -172,6 +216,9 @@ export async function resendOtp(email: string) {
   const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes
   await UserRepo.createVerification(user.id, "EMAIL_OTP", otpHash, expiresAt);
   await OtpService.sendOtpEmail(email, otp);
+
+// Reset the failed attempts counter
+  await redisClient.del(getOtpAttemptsKey(user.id));
 
   return {
     message: "Verification code resent to your email.",
