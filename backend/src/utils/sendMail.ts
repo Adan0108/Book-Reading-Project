@@ -30,8 +30,8 @@ const transporter: Transporter = nodemailer.createTransport({
     rejectUnauthorized: !allowSelfSigned, // <-- dev bypass
     servername: host, // SNI
   },
-  logger: true,
-  debug: true,
+  // logger: true, //flooded the terminal, turn on for debug only
+  // debug: true, //flooded the terminal, turn on for debug only
 });
 
 transporter.verify()
