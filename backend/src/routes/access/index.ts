@@ -6,7 +6,11 @@ import { authenticationV2, requireRefreshToken } from "../../auth/checkAuth";
 const router = Router();
 
 // public
-router.post("/register",asyncHandler(accessController.register));
+// router.post("/register",asyncHandler(accessController.register));
+router.post("/register-email", asyncHandler(accessController.registerEmail));
+router.post("/verify-email", asyncHandler(accessController.verifyEmail));
+router.post("/setup-password", asyncHandler(accessController.setupPassword));
+router.post("/resend-otp", asyncHandler(accessController.resendOtp));
 router.post("/login",asyncHandler(accessController.login));
 
 //protected
