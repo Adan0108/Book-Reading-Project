@@ -72,7 +72,7 @@ export async function registerEmail(email: string) {
   }
 
   // 3. Check for OTP cooldown
-  const remainingCooldown = await OtpService.checkOtpCooldown(user.id);
+  const remainingCooldown = await OtpService.checkOtpCooldown(user.id, "EMAIL_OTP");
   if (remainingCooldown > 0) {
     throw new BadRequestError(
       `Please wait ${remainingCooldown} seconds to resend OTP.`
@@ -184,7 +184,7 @@ export async function resendOtp(email: string) {
   if (!redisClient) throw new RedisErrorResponse("Redis not ready");
 
   // 1. Check for cooldown
-  const remainingCooldown = await OtpService.checkOtpCooldown(user.id);
+  const remainingCooldown = await OtpService.checkOtpCooldown(user.id, "EMAIL_OTP");
   if (remainingCooldown > 0) {
     throw new BadRequestError(
       `Please wait ${remainingCooldown} seconds to resend OTP.`
@@ -220,7 +220,7 @@ export async function forgotPassword(email: string) {
   }
 
   // 2. Check for OTP cooldown (using 'RESET' type)
-  const remainingCooldown = await OtpService.checkOtpCooldown(user.id); // Note: Cooldown is shared for now.
+  const remainingCooldown = await OtpService.checkOtpCooldown(user.id, "RESET"); // Note: Cooldown is shared for now.
   if (remainingCooldown > 0) {
     throw new BadRequestError(`Please wait ${remainingCooldown} seconds to request a new code.`);
   }

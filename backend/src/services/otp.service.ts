@@ -22,10 +22,10 @@ export const generateOtp = async () => {
 /**
  * Checks if a user has requested an OTP within the cooldown period.
  */
-export const checkOtpCooldown = async (userId: number): Promise<number> => {
+export const checkOtpCooldown = async (userId: number, type: VerificationType): Promise<number> => {
   return await getRemainingCooldown(
     userId,
-    'EMAIL_OTP',
+    type,
     OTP_COOLDOWN_MINUTES
   );
 };
