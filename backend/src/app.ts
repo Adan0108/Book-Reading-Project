@@ -10,13 +10,23 @@ import routes from "./routes";
 import { runMigrationsOnce } from "./dbs/migrate";
 import { pingMySQL } from "./dbs/init.mysql";
 import { initRedis } from "./dbs/init.redis";
+import { runUserCleanup } from "./services/cleanup.service";
 
 const app = express();
+const ONE_DAY_IN_MS = 24 * 60 * 60 * 1000;
 
 (async function initDatastores() {
   try {
     await pingMySQL();              // log: [MySQL] ping OK
     await runMigrationsOnce();
+
+    // Schedule the cleanup task after the database is ready
+    console.log("[Scheduler] Starting user cleanup task...");
+    // Run the cleanup task immediately on startup...
+    runUserCleanup();
+    // ...and then run it again every 24 hours.
+    setInterval(runUserCleanup, ONE_DAY_IN_MS);
+    
   } catch (e) {
     console.error("[MySQL] init failed:", (e as Error).message);
   }
