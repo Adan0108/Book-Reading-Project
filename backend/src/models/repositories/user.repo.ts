@@ -183,3 +183,20 @@ export async function blockUser(userId: number): Promise<void> {
 export async function unblockUser(userId: number): Promise<void> {
   await pool.query("UPDATE users SET state = 1, updated_at = NOW() WHERE id = ?", [userId]);
 }
+
+/**
+ * Deletes all users who are in an incomplete state (0 or 2)
+ * and were created more than 'hoursAgo' hours ago.
+ */
+export async function cleanupStaleUsers(hoursAgo: number = 24): Promise<number> {
+  const [res] = await pool.query(
+    `
+    DELETE FROM users
+    WHERE
+      (state = 0 OR state = 2)
+      AND created_at < (NOW() - INTERVAL ? HOUR)
+    `,
+    [hoursAgo]
+  );
+  return (res as any).affectedRows;
+}

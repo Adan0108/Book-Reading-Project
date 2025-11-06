@@ -1,18 +1,19 @@
 import bcrypt from "bcrypt";
 import crypto from "node:crypto";
-// import { create as createUser, findByEmail, addRole } from "../models/repositories/user.repo";
-// import { createProfile } from "../models/repositories/userProfile.repo";
-// import { getByUserId, upsert as upsertKeys } from "../models/repositories/userKeys.repo";
 import * as UserRepo from "../models/repositories/user.repo";
 import * as ProfileRepo from "../models/repositories/userProfile.repo";
 import * as KeysRepo from "../models/repositories/userKeys.repo";
 import type { UserKeysRow } from "../models/repositories/userKeys.repo";
 import type { User } from "../models/user.model";
-import { AuthFailureError, BadRequestError, ConflictRequestError } from "../core/error.response";
+import {
+  AuthFailureError,
+  BadRequestError,
+  ConflictRequestError,
+} from "../core/error.response";
 import { createTokenPair, revokeToken } from "../auth/checkAuth";
 import * as OtpService from "./otp.service";
-import { getRedis } from '../dbs/init.redis';
-import { RedisErrorResponse } from '../core/error.response';
+import { getRedis } from "../dbs/init.redis";
+import { RedisErrorResponse } from "../core/error.response";
 
 /** Register:
  * - create user
@@ -47,10 +48,6 @@ import { RedisErrorResponse } from '../core/error.response';
 // }
  */
 
-// Check OTP attempts
-const MAX_OTP_ATTEMPTS = 10;
-const getOtpAttemptsKey = (userId: number) => `otp_attempts:${userId}:EMAIL_OTP`;
-
 /**
  * Step 1: Submit email, create inactive user, send OTP.
  */
@@ -75,9 +72,11 @@ export async function registerEmail(email: string) {
   }
 
   // 3. Check for OTP cooldown
-  const remainingCooldown = await OtpService.checkOtpCooldown(user.id);
+  const remainingCooldown = await OtpService.checkOtpCooldown(user.id, "EMAIL_OTP");
   if (remainingCooldown > 0) {
-    throw new BadRequestError(`Please wait ${remainingCooldown} seconds to resend OTP.`);
+    throw new BadRequestError(
+      `Please wait ${remainingCooldown} seconds to resend OTP.`
+    );
   }
 
   // 4. Generate, save, and send new OTP
@@ -87,7 +86,7 @@ export async function registerEmail(email: string) {
   await OtpService.sendOtpEmail(email, otp);
 
   // Reset the failed attempts counter
-  await redisClient.del(getOtpAttemptsKey(user.id));
+  await OtpService.clearOtpAttempts(user.id, "EMAIL_OTP");
 
   return {
     message: "Verification code sent to your email.",
@@ -99,51 +98,29 @@ export async function registerEmail(email: string) {
  * Step 2: Verify email with OTP.
  */
 export async function verifyEmail(email: string, otp: string) {
-  const redisClient = getRedis();
-  if (!redisClient) throw new RedisErrorResponse("Redis not ready");
-
   const user = await UserRepo.findByEmail(email);
   if (!user || user.state !== 0) {
     throw new BadRequestError("User not found or has already been verified.");
   }
 
-  const attemptsKey = getOtpAttemptsKey(user.id);
+  // 1. Check if user is already blocked (too many attempts)
+  await OtpService.checkOtpAttempts(user.id, "EMAIL_OTP"); // <- moved to otp.service.ts
 
-  const attempts = Number(await redisClient.get(attemptsKey)) || 0; //check attempt count
-  if (attempts >= MAX_OTP_ATTEMPTS) {
-    throw new AuthFailureError("Too many failed OTP attempts. Please request a new code.");
-  }
-
+  // 2. Find the active OTP
   const verification = await UserRepo.findActiveOtpByType(user.id, "EMAIL_OTP");
   if (!verification) {
     throw new BadRequestError("No active OTP found. Please request a new one.");
   }
 
+  // 3. Check if OTP matches
   const isMatch = await bcrypt.compare(otp, verification.otp_hash!);
   if (!isMatch) {
-    const newAttempts = await redisClient.incr(attemptsKey); // ++count
-    if (newAttempts === 1) {
-      // set the counter to expire when the OTP expires
-      const otpExpiry = new Date(verification.expires_at).getTime();
-      const now = Date.now();
-      const ttl = Math.floor((otpExpiry - now) / 1000);
-      if (ttl > 0) {
-        await redisClient.expire(attemptsKey, ttl);
-      }
-    }
-
-    // if the 10th one, delete the OTP from db
-    if (newAttempts >= MAX_OTP_ATTEMPTS) {
-      await UserRepo.invalidateActiveOtps(user.id, "EMAIL_OTP");
-      await redisClient.del(attemptsKey); // clean up
-      throw new AuthFailureError("Invalid OTP. Too many failed attempts. A new code is required.");
-    }
-
-    throw new AuthFailureError(`Invalid OTP. You have ${MAX_OTP_ATTEMPTS - newAttempts} attempts remaining.`);
+    // 4. If no match, increment counter (this function will throw an error)
+    await OtpService.incrementOtpAttempts(user.id, "EMAIL_OTP", verification); // <- moved to otp.service.ts
   }
 
-  // Success: Mark OTP as used and update user state to 2 (pending password)
-  await redisClient.del(attemptsKey); // clear the counter
+  // 5. Success: Mark OTP as used and update user state
+  await OtpService.clearOtpAttempts(user.id, "EMAIL_OTP"); // clear the counter // <- moved to otp.service.ts
   await UserRepo.markVerificationAsVerified(verification.id);
   await UserRepo.updateState(user.id, 2); // 2 = VERIFIED_PENDING_PASSWORD
 
@@ -155,7 +132,11 @@ export async function verifyEmail(email: string, otp: string) {
 /**
  * Step 3: Set password, username, and activate account.
  */
-export async function setupPassword(email: string, password: string, username: string) {
+export async function setupPassword(
+  email: string,
+  password: string,
+  username: string
+) {
   const user = await UserRepo.findByEmail(email);
   if (!user || user.state !== 2) {
     // 2 = VERIFIED_PENDING_PASSWORD
@@ -203,13 +184,15 @@ export async function resendOtp(email: string) {
   if (!redisClient) throw new RedisErrorResponse("Redis not ready");
 
   // 1. Check for cooldown
-  const remainingCooldown = await OtpService.checkOtpCooldown(user.id);
+  const remainingCooldown = await OtpService.checkOtpCooldown(user.id, "EMAIL_OTP");
   if (remainingCooldown > 0) {
-    throw new BadRequestError(`Please wait ${remainingCooldown} seconds to resend OTP.`);
+    throw new BadRequestError(
+      `Please wait ${remainingCooldown} seconds to resend OTP.`
+    );
   }
 
   // 2. Invalidate old OTPs
-  await UserRepo.invalidateActiveOtps(user.id, "EMAIL_OTP");
+  await OtpService.clearOtpAttempts(user.id, "EMAIL_OTP"); // <- moved to otp.service.ts
 
   // 3. Generate, save, and send new OTP
   const { otp, otpHash } = await OtpService.generateOtp();
@@ -217,12 +200,94 @@ export async function resendOtp(email: string) {
   await UserRepo.createVerification(user.id, "EMAIL_OTP", otpHash, expiresAt);
   await OtpService.sendOtpEmail(email, otp);
 
-// Reset the failed attempts counter
-  await redisClient.del(getOtpAttemptsKey(user.id));
+  // Reset the failed attempts counter
+  await OtpService.clearOtpAttempts(user.id, "EMAIL_OTP"); // <- moved to otp.service.ts
 
   return {
     message: "Verification code resent to your email.",
     cooldown: OtpService.OTP_COOLDOWN_MINUTES * 60,
+  };
+}
+
+/**
+ * Forgot Password: Request a reset OTP.
+ */
+export async function forgotPassword(email: string) {
+  // 1. Find user, but ONLY if they are active
+  const user = await UserRepo.findByEmail(email);
+  if (!user || user.state !== 1) { // 1 = ACTIVE
+    throw new BadRequestError("No active account found for this email.");
+  }
+
+  // 2. Check for OTP cooldown (using 'RESET' type)
+  const remainingCooldown = await OtpService.checkOtpCooldown(user.id, "RESET"); // Note: Cooldown is shared for now.
+  if (remainingCooldown > 0) {
+    throw new BadRequestError(`Please wait ${remainingCooldown} seconds to request a new code.`);
+  }
+
+  // 3. Invalidate old 'RESET' OTPs
+  await UserRepo.invalidateActiveOtps(user.id, "RESET");
+
+  // 4. Generate, save, and send new 'RESET' OTP
+  const { otp, otpHash } = await OtpService.generateOtp();
+  const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes
+  await UserRepo.createVerification(user.id, "RESET", otpHash, expiresAt);
+  
+  // Use the new email function
+  await OtpService.sendResetPasswordOtpEmail(email, otp);
+
+  // 5. Reset the attempt counter for 'RESET'
+  await OtpService.clearOtpAttempts(user.id, "RESET");
+
+  return {
+    message: "Password reset code sent to your email.",
+    cooldown: OtpService.OTP_COOLDOWN_MINUTES * 60,
+  };
+}
+
+/**
+ * Verify OTP and set new password.
+ */
+export async function resetPassword(email: string, otp: string, newPassword: string) {
+  // 1. Find active user
+  const user = await UserRepo.findByEmail(email);
+  if (!user || user.state !== 1) {
+    throw new BadRequestError("No active account found for this email.");
+  }
+
+  // 2. Check brute-force attempts
+  await OtpService.checkOtpAttempts(user.id, "RESET");
+
+  // 3. Find the active 'RESET' OTP
+  const verification = await UserRepo.findActiveOtpByType(user.id, "RESET");
+  if (!verification) {
+    throw new BadRequestError("No active password reset request found. Please try again.");
+  }
+
+  // 4. Check if OTP matches
+  const isMatch = await bcrypt.compare(otp, verification.otp_hash!);
+  if (!isMatch) {
+    // 5. If no match, increment counter
+    await OtpService.incrementOtpAttempts(user.id, "RESET", verification);
+  }
+
+  // 6. Success: Clear counter, hash new password, and update user
+  await OtpService.clearOtpAttempts(user.id, "RESET");
+  await UserRepo.markVerificationAsVerified(verification.id);
+  
+  const newPasswordHash = await bcrypt.hash(newPassword, 12);
+  await UserRepo.updatePassword(user.id, newPasswordHash);
+
+  // 7. Security: Invalidate all existing tokens
+  const redisClient = getRedis();
+  if (!redisClient) throw new RedisErrorResponse("Redis not ready");
+  // This key is used by checkAuth.ts to log out all other sessions
+  const cutoffKey = `TOKEN_IAT_AVAILABLE_${user.id}`; 
+  const cutoffTimestamp = Math.floor(Date.now() / 1000);
+  await redisClient.set(cutoffKey, cutoffTimestamp.toString());
+
+  return {
+    message: "Password has been reset successfully. You can now log in.",
   };
 }
 
@@ -231,15 +296,22 @@ export async function resendOtp(email: string) {
  * - ensure per-user key pair exists (create if missing)
  * - issue tokens
  */
-export async function login(email: string, password: string): Promise<{
+export async function login(
+  email: string,
+  password: string
+): Promise<{
   user: Pick<User, "id" | "email">;
   tokens: { accessToken: string; refreshToken: string };
 }> {
   const user = await UserRepo.findByEmail(email);
   if (!user) throw new AuthFailureError("Invalid credentials");
-  if (!(await bcrypt.compare(password, user.password_hash))) throw new AuthFailureError("Invalid credentials");
+  if (!(await bcrypt.compare(password, user.password_hash)))
+    throw new AuthFailureError("Invalid credentials");
   if (user.state === 0) throw new AuthFailureError("Account blocked");
-  if (user.state === 2) throw new AuthFailureError("Account not fully set up. Please set your password.");
+  if (user.state === 2)
+    throw new AuthFailureError(
+      "Account not fully set up. Please set your password."
+    );
   if (user.state !== 1) throw new AuthFailureError("Account is not active.");
 
   const id = Number(user.id);
@@ -261,16 +333,24 @@ export async function login(email: string, password: string): Promise<{
     };
   }
 
-  const tokens = await createTokenPair({ uid: id, email }, keys.public_key, keys.private_key);
+  const tokens = await createTokenPair(
+    { uid: id, email },
+    keys.public_key,
+    keys.private_key
+  );
   return { user: { id, email: user.email }, tokens };
 }
 
 /** Logout:
  * - blacklist the current access token (middleware put decoded token into req.user)
  */
-export async function logout(decodedAT: { uid: number; jti: string; exp?: number }) {
+export async function logout(decodedAT: {
+  uid: number;
+  jti: string;
+  exp?: number;
+}) {
   const now = Math.floor(Date.now() / 1000);
-  const ttl = decodedAT.exp ? Math.max(decodedAT.exp - now, 1) : 24 * 60 * 60; 
+  const ttl = decodedAT.exp ? Math.max(decodedAT.exp - now, 1) : 24 * 60 * 60;
   await revokeToken(decodedAT.uid, decodedAT.jti, ttl);
   return { ok: true };
 }
@@ -293,5 +373,9 @@ export async function refreshTokens(
   }
 
   // mint a fresh pair (same per-user keys)
-  return await createTokenPair({ uid: userId, email }, keys.public_key, keys.private_key);
+  return await createTokenPair(
+    { uid: userId, email },
+    keys.public_key,
+    keys.private_key
+  );
 }
