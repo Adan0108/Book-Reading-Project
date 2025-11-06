@@ -1,2 +1,21 @@
 @import "tailwindcss";
 @plugin "daisyui";
+
+.swiper-thumb-center .swiper-wrapper {
+    justify-content: center !important;
+}
+
+.swiper-thumb-center .swiper-slide-thumb-active img {
+    opacity: 1 !important;
+    transform: scale(1.05);
+    box-shadow: 0 0 12px rgba(255, 255, 255, 0.9);
+    border: 2px solid rgba(255, 255, 255, 1);
+}
+  
+  /* Dim non-active thumbnails */
+.swiper-thumb-center .swiper-slide img {
+    transition: all 0.3s ease;
+    opacity: 0.55;
+    border: 2px solid transparent;
+}
+  

@@ -1,9 +1,36 @@
 import React, {useState} from "react"
 import { FiMail, FiLock, FiEye, FiEyeOff } from 'react-icons/fi';
+import { useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
+import { useAuthStore } from "../store/useAuthStore";
+import type { AuthState } from "../type/store";
 
 
 const LoginPage = () => {
   const [showPassword, setShowPassword] = useState(false);
+  const navigate = useNavigate();
+
+  const login = useAuthStore((state: AuthState) => state.login);
+  const isLoggingIn = useAuthStore((state: AuthState) => state.isLoggingIn);
+
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    const formData = new FormData(event.currentTarget);
+    const email = formData.get('email') as string;
+    const password = formData.get('password') as string;
+
+    if (!email || !password) {
+      toast.error("Please enter both email and password.");
+      return;
+    }
+
+    const success = await login(email, password);
+
+    if (success) {
+      navigate('/');
+    }
+  };
 
   return (
     <div
@@ -28,7 +55,7 @@ const LoginPage = () => {
             <p className = "mt-1 text-gray-500">Enter your credentials to access your account</p>
           </div>
 
-          <form className = "space-y-6">
+          <form className = "space-y-6" onSubmit={handleSubmit}>
             {/* Email Input */}
             <div>
               <label htmlFor = "email" className = "text-sm font-medium text-gray-700"> Email </label>
@@ -102,9 +129,10 @@ const LoginPage = () => {
             <div>
               <button
                 type = "submit"
+                disabled={isLoggingIn}
                 className = "w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-black hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-black"
               >
-                Sign In
+                {isLoggingIn ? 'Signing In...' : 'Sign In'}
               </button>
             </div>
           </form>

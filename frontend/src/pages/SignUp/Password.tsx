@@ -1,25 +1,52 @@
 import React, {useState} from 'react'
 import { useNavigate } from 'react-router-dom';
 import { FiArrowLeft, FiUser, FiLock, FiEye, FiEyeOff } from 'react-icons/fi';
+import { useAuthStore } from '../../store/useAuthStore';
+import type { AuthState } from '../../type/store';
+import { toast } from 'sonner';
 
 const Password = () => {
 
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-
   const navigate = useNavigate();
-  const email = "quang1452000@gmail.com";
+
+  const setupPassword = useAuthStore((state: AuthState) => state.setupPassword);
+  const isSettingUpPassword = useAuthStore((state: AuthState) => state.isSettingUpPassword);
+  const emailToVerify = useAuthStore((state: AuthState) => state.emailToVerify);
 
   const handleBack = () => {
     navigate('/otp');
   }
 
-  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
-      // Prevent the browser from doing a full-page reload
-      event.preventDefault(); 
-      
-      console.log('Email-only form submitted!');
-    };
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault(); 
+    
+    const formData = new FormData(event.currentTarget);
+    const username = formData.get('username') as string;
+    const password = formData.get('password') as string;
+    const confirmPassword = formData.get('confirm-password') as string;
+
+    // Validation
+    if (password !== confirmPassword) {
+      toast.error("Passwords do not match.");
+      return;
+    }
+    if (password.length < 8) {
+      toast.error("Password must be at least 8 characters long.");
+      return;
+    }
+
+    console.log('Profile form submitted!');
+    
+    // Call the store function
+    const success = await setupPassword(username, password);
+
+    // Navigate to the homepage on success
+    if (success) {
+      navigate('/');
+    }
+  };
 
   return (
     <div
@@ -31,7 +58,7 @@ const Password = () => {
       }}
     >
       <div className = "flex flex-col items-center justify-center w-full max-w-4xl px-4">
-        <div className = "w-full max-w-md pt-1 px-8 pb-8 bg-white rounded-xl shadow-lg">
+        <div className = "w-full max-w-md pt-4 px-8 pb-8 bg-white rounded-xl shadow-lg">
 
           <div className = "relative flex justify-center items-center">
           
@@ -54,7 +81,7 @@ const Password = () => {
           {/* Showing email */}
           <div className = "flex justify-center mb-2">
             <div className = "px-4 py-2 text-sm text-gray-700 bg-gray-100 border border-gray-300 rounded-full">
-              {email}
+              {emailToVerify || "your-email@example.com"}
             </div>
           </div>
 
@@ -159,13 +186,14 @@ const Password = () => {
               </div>
             </div>
 
-            {/* Create Account Button */}
+            {/* Submit Button */}
             <div className = "mt-8">
               <button
                 type="submit"
-                className="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-black hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-black"
+                disabled={isSettingUpPassword}
+                className="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-black hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-black disabled:bg-gray-400 disabled:cursor-not-allowed"
               >
-                Submit
+                {isSettingUpPassword ? 'Completing Profile...' : 'Complete Profile'}
               </button>
             </div>
             

@@ -1,20 +1,40 @@
 import React, { useState } from 'react';
 import { FiMail } from 'react-icons/fi';
 import { useNavigate } from 'react-router-dom';
+import { useAuthStore } from '../../store/useAuthStore';
+import { toast } from 'sonner';
+import type { AuthState } from '../../type/store';
+
 
 const SignUp = () => {
-  // const [showPassword, setShowPassword] = useState(false);
-  // const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const navigate = useNavigate();
 
-  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+  const signUp = useAuthStore((state: AuthState) => state.signUp);
+  const isSigningUp = useAuthStore((state: AuthState) => state.isSigningUp);
+
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     // Prevent the browser from doing a full-page reload
-    event.preventDefault(); 
+    event.preventDefault();
     
-    console.log('Email-only form submitted!');
+    const formData = new FormData(event.currentTarget);
+    const email = formData.get('email') as string
+
+    if (!email) {
+      toast.error("Please enter an email.");
+      return;
+    }
     
-    navigate('/OTP');
+    console.log('Email form submitted!');
+
+    // 4. Call the store function (which calls the service)
+    const success = await signUp(email);
+
+    // 5. Only navigate if the API call was successful
+    if (success) {
+      navigate('/OTP' , { state: { email } });
+    }
+
   };
   
   return (
@@ -76,9 +96,10 @@ const SignUp = () => {
             <div className = "mt-8">
               <button
                 type="submit"
-                className="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-black hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-black"
+                disabled={isSigningUp}
+                className="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-black hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-black disabled:bg-gray-400 disabled:cursor-not-allowed"
               >
-                Next
+                {isSigningUp ? 'Sending...' : 'Continue'}
               </button>
             </div>
 
