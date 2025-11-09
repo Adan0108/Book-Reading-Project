@@ -6,6 +6,9 @@ export interface AuthState {
     isVerifying: boolean;
     isResending: boolean;
     isSettingUpPassword: boolean;
+    isRequestingReset: boolean;
+    isResettingPassword: boolean;
+    isResendingReset: boolean;
     emailToVerify: string | null;
     
 
@@ -16,4 +19,7 @@ export interface AuthState {
     setupPassword: (username: string, password: string) => Promise<boolean>;
     login: (email: string, password: string) => Promise<boolean>;
     logout: () => Promise<void>;
+    forgotPassword: (email:string) => Promise<boolean>;
+    resetPassword: (otp: string, newPassword: string) => Promise<boolean>;
+    resendPasswordReset: () => Promise<void>;
 }

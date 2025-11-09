@@ -11,8 +11,8 @@ export const authService = {
         return res.data;
     },
 
-    ResendOtp: async (email: string, otp: string) => {
-        const res = await api.post('/access/resend-otp', { email, otp }, { withCredentials: true });
+    ResendOtp: async (email: string) => {
+        const res = await api.post('/access/resend-otp', { email }, { withCredentials: true });
         return res.data;
     },
 
@@ -29,5 +29,17 @@ export const authService = {
     logout: async (id: number) => {
         const res = await api.post('/access/logout', {id}, { withCredentials: true });
         return res.data;
-    }
+    },
+
+    forgotPassword: async (email:string) => {
+        const res = await api.post('/access/forgot-password', { email }, { withCredentials: true });
+        return res.data;
+    },
+
+    resetPassword: async (email: string, otp: string, newPassword: string) => {
+        const res = await api.post('/access/reset-password', { email, otp, newPassword }, { withCredentials: true });
+        return res.data;
+    },
+
+    
 }

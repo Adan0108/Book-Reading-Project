@@ -13,6 +13,9 @@ router.post("/setup-password", asyncHandler(accessController.setupPassword));
 router.post("/resend-otp", asyncHandler(accessController.resendOtp));
 router.post("/login",asyncHandler(accessController.login));
 
+router.post("/forgot-password", asyncHandler(accessController.forgotPassword));
+router.post("/reset-password", asyncHandler(accessController.resetPassword));
+
 //protected
 router.post("/logout", authenticationV2, asyncHandler(accessController.logout));
 router.post("/refresh",  requireRefreshToken, asyncHandler(accessController.refresh));

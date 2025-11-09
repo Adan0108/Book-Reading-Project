@@ -16,11 +16,11 @@ const Header = ({ onStartTour, authUser }: HeaderProps) => {
   const logout = useAuthStore((state: AuthState) => state.logout);
 
   return (
-    <header className = "sticky top-0 z-50 bg-gray-800 dark:bg-gray-950 text-white shadow-md">
+    <header className = "sticky top-0 z-50 bg-orange-900 dark:bg-gray-950 text-white shadow-md">
       <div className = "container mx-auto max-w-7xl px-4 py-3 flex items-center justify-between">
 
         {/* Logo Section */}
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-10">
           {/* Logo */}
           <a href="/" className="flex-shrink-0">
             <img

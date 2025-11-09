@@ -12,6 +12,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     isVerifying: false, 
     isResending: false,
     isSettingUpPassword: false,
+    isRequestingReset: false,
+    isResettingPassword: false,
+    isResendingReset: false,
     emailToVerify: null,
 
     signUp: async (email: string) => {
@@ -72,7 +75,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         }
 
         try {
-            await authService.signUp(email);
+            await authService.ResendOtp(email);
             toast.success("A new code has been sent.");
         }
         catch(error) {
@@ -160,5 +163,75 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             toast.success("You have been logged out.");
         }
     },
+
+    forgotPassword: async (email: string) => {
+        set({ isRequestingReset: true, emailToVerify: email });
+
+        try {
+            await authService.forgotPassword(email);
+            toast.success('A password reset code has been sent to your email.');
+            return true;
+        }
+        catch (error) {
+            console.error('Forgot password error:', error);
+            toast.error('Failed to send reset email. Please try again.');
+            set({ emailToVerify: null }); 
+            return false;
+        }
+        finally {
+            set({ isRequestingReset: false });
+        }
+    },
+
+    resetPassword: async (otp: string, newPassword: string) => {
+        set({ isResettingPassword: true });
+        const email = get().emailToVerify; 
+
+        if (!email) {
+            toast.error("An error occurred. Please try again.");
+            set({ isResettingPassword: false });
+            return false;
+        }
+
+        try {
+            await authService.resetPassword(email, otp, newPassword);
+            
+            // It worked! Clear the email and send a success toast.
+            set({ emailToVerify: null }); 
+            toast.success("Password has been reset successfully!");
+            return true;
+        }
+        catch (error) {
+            console.error("Reset password error:", error);
+            toast.error("Invalid or expired OTP. Please try again.");
+            return false;
+        }
+        finally {
+            set({ isResettingPassword: false });
+        }
+    },
+
+    resendPasswordReset: async () => {
+        set({ isResendingReset: true });
+        const email = get().emailToVerify;
+
+        if (!email) {
+            toast.error("An error occurred. Please go back.");
+            set({ isResendingReset: false });
+            return;
+        }
+
+        try {
+            await authService.forgotPassword(email);
+            toast.success("A new code has been sent.");
+        }
+        catch (error) {
+            console.error("Resend password reset error:", error);
+            toast.error("Failed to resend code. Please try again.");
+        }
+        finally {
+            set({ isResendingReset: false });
+        }
+    }
     
 }));

@@ -46,6 +46,22 @@ class AccessController {
     return new OK("Verification code resent.", metadata).send(res);
   };
 
+  forgotPassword = async (req: Request, res: Response) => {
+    const { email } = req.body ?? {};
+    if (!email) throw new BadRequestError("Email is required");
+    const metadata = await AccessService.forgotPassword(email);
+    return new OK("Password reset code sent.", metadata).send(res);
+  };
+
+  resetPassword = async (req: Request, res: Response) => {
+    const { email, otp, newPassword } = req.body ?? {};
+    if (!email || !otp || !newPassword) {
+      throw new BadRequestError("Email, OTP, and newPassword are required");
+    }
+    const metadata = await AccessService.resetPassword(email, otp, newPassword);
+    return new OK("Password reset successfully.", metadata).send(res);
+  };
+
   login = async (req: Request, res: Response) => {
     const { email, password } = req.body ?? {};
     if (!email || !password) throw new BadRequestError("email and password are required");
