@@ -6,6 +6,8 @@ import  ComicGrid  from './ComicGrid';
 import  Sidebar  from './Sidebar';
 import {driver} from 'driver.js';
 import 'driver.js/dist/driver.css';
+import { useAuthStore } from '../../store/useAuthStore';
+import type { AuthState } from '../../type/store';
 
 const driverObj = driver({
   steps: [
@@ -43,9 +45,12 @@ const driverObj = driver({
 })
 
 const HomePage = () => {
+
+  const authUser = useAuthStore((state: AuthState) => state.authUser);
+
   return (
     <div className="min-h-screen bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100">
-      <Header onStartTour = {handleStartTour}/>
+      <Header onStartTour = {handleStartTour} authUser={authUser}/>
 
       {/* Featured Slider - Full width above the columns */}
       <FeaturedSlider />
