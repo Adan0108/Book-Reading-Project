@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import  Header  from './Header';
 import  Footer  from './Footer';
 import  FeaturedSlider from './FeaturedSlider';
@@ -46,11 +46,16 @@ const driverObj = driver({
 
 const HomePage = () => {
 
-  const authUser = useAuthStore((state: AuthState) => state.authUser);
+  const checkAuth = useAuthStore((state) => state.refreshToken);
+
+  // Run once on mount
+  useEffect(() => {
+    checkAuth();
+  }, [checkAuth]);
 
   return (
     <div className="min-h-screen bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100">
-      <Header onStartTour = {handleStartTour} authUser={authUser}/>
+      <Header onStartTour = {handleStartTour} />
 
       {/* Featured Slider - Full width above the columns */}
       <FeaturedSlider />

@@ -9,6 +9,8 @@ export interface AuthState {
     isRequestingReset: boolean;
     isResettingPassword: boolean;
     isResendingReset: boolean;
+    isRefreshingToken: boolean;
+    isFetchingUser: boolean;
     emailToVerify: string | null;
     
 
@@ -22,4 +24,6 @@ export interface AuthState {
     forgotPassword: (email:string) => Promise<boolean>;
     resetPassword: (otp: string, newPassword: string) => Promise<boolean>;
     resendPasswordReset: () => Promise<void>;
+    refreshToken: () => Promise<void>;
+    fetchMe: () => Promise<void>;
 }

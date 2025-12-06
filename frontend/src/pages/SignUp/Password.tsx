@@ -44,7 +44,7 @@ const Password = () => {
 
     // Navigate to the homepage on success
     if (success) {
-      navigate('/');
+      navigate('/login');
     }
   };
 

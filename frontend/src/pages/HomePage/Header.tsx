@@ -7,13 +7,13 @@ import { useAuthStore } from '../../store/useAuthStore';
 
 interface HeaderProps {
   onStartTour: () => void; // A function that returns nothing
-  authUser: AuthState['authUser'];
 }
 
-const Header = ({ onStartTour, authUser }: HeaderProps) => {
+const Header = ({ onStartTour }: HeaderProps) => {
 
   const navigate = useNavigate();
   const logout = useAuthStore((state: AuthState) => state.logout);
+  const authUser = useAuthStore((state: AuthState) => state.authUser);
 
   return (
     <header className = "sticky top-0 z-50 bg-orange-900 dark:bg-gray-950 text-white shadow-md">
@@ -59,26 +59,17 @@ const Header = ({ onStartTour, authUser }: HeaderProps) => {
           <a href="#" className="hidden md:block hover:text-yellow-400">Thể loại</a>
           
           {authUser ? (
-            // If user IS logged in:
             <div className="flex items-center gap-3">
               <span className="text-sm font-medium text-white">
-                {/* Show username, or fallback to the start of their email */}
-                Hi, {authUser.username || authUser.email.split('@')[0]}
+                Hi, {authUser.username || (authUser.email ? authUser.email.split('@')[0] : 'User')}
               </span>
-              <button
-                onClick={() => logout()}
-                className="bg-red-600 text-white px-3 py-1 rounded-md text-sm font-medium hover:bg-red-500"
-              >
+              <button onClick={() => logout()} className="bg-red-600 text-white px-3 py-1 rounded-md text-sm font-medium hover:bg-red-500">
                 Logout
               </button>
             </div>
           ) : (
-            // If user is NOT logged in:
-            <button
-              onClick={() => navigate('/login')}
-              className="bg-yellow-500 text-gray-900 px-3 py-1 rounded-md text-sm font-medium hover:bg-yellow-400"
-            >
-              Login
+            <button onClick={() => navigate('/login')} className="bg-yellow-500 text-gray-900 px-3 py-1 rounded-md text-sm font-medium hover:bg-yellow-400">
+              Sign In
             </button>
           )}
 
