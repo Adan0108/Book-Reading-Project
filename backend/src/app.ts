@@ -12,7 +12,8 @@ import { pingMySQL } from "./dbs/init.mysql";
 import { initRedis } from "./dbs/init.redis";
 import { runUserCleanup } from "./services/cleanup.service";
 import swaggerUi from "swagger-ui-express";
-import { swaggerSpec } from "./configs/swagger.config";
+import YAML from "yamljs";
+import path from "path";
 
 const app = express();
 const ONE_DAY_IN_MS = 24 * 60 * 60 * 1000;
@@ -51,7 +52,9 @@ app.use(cors({
   origin:[process.env.FRONTEND_URL || "http://localhost:8000"],
   credentials: true,
 }));
-app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+
+const swaggerDocument = YAML.load(path.join(__dirname, "./docs/swagger.yaml"));
+app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 
 app.use(cookieParser());
 // mount routes
