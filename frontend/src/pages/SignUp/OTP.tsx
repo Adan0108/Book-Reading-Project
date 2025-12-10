@@ -2,23 +2,65 @@ import React, { useState, useEffect } from 'react';
 import OtpInput from 'react-otp-input';
 import { FiArrowLeft } from 'react-icons/fi';
 import { useNavigate } from 'react-router-dom';
+import { useAuthStore } from '../../store/useAuthStore';
+import type { AuthState } from '../../type/store';
 
 const OTP = () => {
 
   const [otp, setOtp] = useState('');
+  const [countdown, setCountdown] = useState(60);
   const navigate = useNavigate();
-  const email = "quang1452000au@gmail.com";
+
+  const verifyOtp = useAuthStore((state: AuthState) => state.verifyOtp);
+  const isVerifying = useAuthStore((state: AuthState) => state.isVerifying);
+  const emailToVerify = useAuthStore((state: AuthState) => state.emailToVerify);
+  const resendOtp = useAuthStore((state: AuthState) => state.resendOtp); 
+  const isResending = useAuthStore((state: AuthState) => state.isResending); 
 
   const handleBack = () => {
     navigate('/signup');
   }
 
+  const handleResend = async () => {
+    await resendOtp();
+    setCountdown(60);
+  }
+
   // Automatic navigation when OTP is complete
   useEffect(() => {
-    if (otp.length === 6){
-      navigate('/setpassword');
+    if (otp.length === 6) {
+      const handleVerification = async () => {
+        const success = await verifyOtp(otp);
+        
+        if (success) {
+          // It worked! Go to the Password page
+          navigate('/setPassword'); // <-- This is the next step
+        } else {
+          // It failed, clear the OTP so the user can try again
+          setOtp('');
+        }
+      };
+
+      handleVerification();
     }
-  }, [otp, navigate]);
+
+  }, [otp, verifyOtp, navigate]);
+
+  // Countdown timer for resending OTP
+  useEffect(() => {
+    // If countdown is 0, don't do anything
+    if (countdown === 0) return;
+
+    // Start an interval that ticks down every second
+    const intervalId = setInterval(() => {
+      setCountdown((prevCountdown) => prevCountdown - 1);
+    }, 1000);
+
+    // This is a cleanup function.
+    // It clears the interval if the component unmounts or the countdown changes.
+    return () => clearInterval(intervalId);
+    
+  }, [countdown]);
 
   return (
 
@@ -54,8 +96,10 @@ const OTP = () => {
         {/* OTP Instruction */}
         <div className = "flex flex-col items-center">
           
-          <div className = "px-4 py-2 mb-6 text-sm text-gray-700 bg-gray-100 border border-gray-300 rounded-full">
-            {email}
+          <div className="flex justify-center mb-6">
+            <div className="px-4 py-2 text-sm text-gray-700 bg-gray-100 border border-gray-300 rounded-full">
+              {emailToVerify || 'your-email@example.com'}
+            </div>
           </div>
           
           <h1 className = "text-2xl font-bold text-gray-900 mb-2">
@@ -76,6 +120,7 @@ const OTP = () => {
                 <input
                   {...props}
                   style = {{}}
+                  disabled={isVerifying}
                   className="!w-12 !h-14 sm:!w-12 sm:!h-12 font-bold text-center text-2xl border border-gray-300 rounded-md 
                              focus:border-blue-600 focus:outline-none focus:ring-1 focus:ring-blue-600
                              transition-all"
@@ -84,8 +129,18 @@ const OTP = () => {
             />
           </div>
 
-          <button className = "font-medium text-blue-600 hover:text-blue-500">
-            Resend code
+          <button
+            onClick={handleResend}
+            disabled={isVerifying || isResending || countdown > 0}
+            className = "font-medium text-blue-600 hover:text-blue-500 disabled:text-gray-400 disabled:cursor-not-allowed"
+          >
+            {isResending ? (
+              'Sending code...'
+            ) : countdown > 0 ? (
+              `Resend code (${countdown}s)`
+            ) : (
+              'Resend code'
+            )}
           </button>
 
         </div>

@@ -1,4 +1,5 @@
 import { pool } from "../../dbs/init.mysql";
+import { UserProfile } from "../userProfile.model";
 
 export async function createProfile(userId: number, username: string): Promise<void> {
   await pool.query(
@@ -7,4 +8,12 @@ export async function createProfile(userId: number, username: string): Promise<v
      ON DUPLICATE KEY UPDATE username = VALUES(username), updated_at = NOW()`,
     [userId, username]
   );
+}
+
+export async function findByUserId(userId: number): Promise<UserProfile | null> {
+  const [rows] = await pool.query(
+    "SELECT * FROM user_profiles WHERE user_id = ? LIMIT 1", 
+    [userId]
+  );
+  return (rows as any[])[0] ?? null;
 }

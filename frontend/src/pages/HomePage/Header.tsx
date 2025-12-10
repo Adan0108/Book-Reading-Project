@@ -1,18 +1,26 @@
 import React from 'react'
 import { FiSearch, FiMenu } from 'react-icons/fi'
 import { FaFire } from "react-icons/fa";
+import { useNavigate } from 'react-router-dom';
+import type { AuthState } from '../../type/store';
+import { useAuthStore } from '../../store/useAuthStore';
 
 interface HeaderProps {
   onStartTour: () => void; // A function that returns nothing
 }
 
 const Header = ({ onStartTour }: HeaderProps) => {
+
+  const navigate = useNavigate();
+  const logout = useAuthStore((state: AuthState) => state.logout);
+  const authUser = useAuthStore((state: AuthState) => state.authUser);
+
   return (
-    <header className = "sticky top-0 z-50 bg-gray-800 dark:bg-gray-950 text-white shadow-md">
+    <header className = "sticky top-0 z-50 bg-orange-900 dark:bg-gray-950 text-white shadow-md">
       <div className = "container mx-auto max-w-7xl px-4 py-3 flex items-center justify-between">
 
         {/* Logo Section */}
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-10">
           {/* Logo */}
           <a href="/" className="flex-shrink-0">
             <img
@@ -49,9 +57,22 @@ const Header = ({ onStartTour }: HeaderProps) => {
           <a href="#" className="hidden md:block hover:text-yellow-400">Nổi bật </a>
           <a href="#" className="hidden md:block hover:text-yellow-400">Mới nhất</a>
           <a href="#" className="hidden md:block hover:text-yellow-400">Thể loại</a>
-          <a href='/login' className ="bg-yellow-500 text-gray-900 px-3 py-1 rounded-md text-sm font-medium hover:bg-yellow-400">
-            Đăng nhập
-          </a>
+          
+          {authUser ? (
+            <div className="flex items-center gap-3">
+              <span className="text-sm font-medium text-white">
+                Hi, {authUser.username || (authUser.email ? authUser.email.split('@')[0] : 'User')}
+              </span>
+              <button onClick={() => logout()} className="bg-red-600 text-white px-3 py-1 rounded-md text-sm font-medium hover:bg-red-500">
+                Logout
+              </button>
+            </div>
+          ) : (
+            <button onClick={() => navigate('/login')} className="bg-yellow-500 text-gray-900 px-3 py-1 rounded-md text-sm font-medium hover:bg-yellow-400">
+              Sign In
+            </button>
+          )}
+
           <button className="md:hidden text-2xl">
             <FiMenu />
           </button>
