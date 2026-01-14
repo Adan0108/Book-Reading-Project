@@ -159,3 +159,9 @@ export const getBookTags = async (bookId: number) => {
   );
   return rows as any[];
 };
+
+export async function existsSlug(slug: string): Promise<boolean> {
+  const sql = `SELECT 1 FROM books WHERE slug = ? AND deleted_at IS NULL LIMIT 1`;
+  const [rows] = await pool.query(sql, [slug]);
+  return Array.isArray(rows) && rows.length > 0;
+}
