@@ -299,11 +299,11 @@ export const authorUpdateChapter = async (userId: number, bookId: number, chapte
   const patch: any = {};
   if (body.title !== undefined) patch.title = String(body.title).trim();
   if (body.slug !== undefined) patch.slug = String(body.slug).trim();
-  if (body.contentMarkdown !== undefined) patch.content_md = String(body.contentMarkdown);
+  if (body.contentMd !== undefined) patch.content_md = String(body.contentMd);
   if (body.wordCount !== undefined) patch.word_count = Number(body.wordCount);
   if (body.visibility !== undefined) patch.visibility = body.visibility;
   if (body.isDraft !== undefined) patch.is_draft = body.isDraft ? 1 : 0;
-  if (body.plannedReleaseAt !== undefined) patch.scheduled_at = body.plannedReleaseAt ? String(body.plannedReleaseAt) : null;
+  if (body.scheduledAt !== undefined) patch.scheduled_at = body.scheduledAt ? String(body.scheduledAt) : null;
   if (body.publishedAt !== undefined) patch.published_at = body.publishedAt ? String(body.publishedAt) : null;
 
   const affected = await chapterRepo.updateChapter(chapterId, author.id, patch);
