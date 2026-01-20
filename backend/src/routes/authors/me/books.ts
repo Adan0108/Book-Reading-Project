@@ -14,5 +14,6 @@ router.patch('/:bookId', asyncHandler(authorBooksController.updateBook));
 
 router.post('/:bookId/chapters', asyncHandler(authorBooksController.createChapter));
 router.patch('/:bookId/chapters/:chapterId', asyncHandler(authorBooksController.updateChapter));
+router.get('/', asyncHandler(authorBooksController.listMyBooks));
 
 export default router;

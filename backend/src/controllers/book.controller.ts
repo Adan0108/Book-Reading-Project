@@ -36,3 +36,16 @@ export const getChapterByIndex = async (req: Request, res: Response) => {
   const data = await bookService.getChapterContent(slug, idx, viewerId ? Number(viewerId) : undefined);
   new SuccessResponse({ message: 'OK', metadata: data }).send(res);
 };
+
+export const listBooksByAuthor = async (req: Request, res: Response) => {
+  const authorId = Number(req.params.authorId);
+
+  const data = await bookService.listBooksByAuthorPublic({
+    authorId,
+    query: req.query.query as any,
+    page: req.query.page as any,
+    limit: req.query.limit as any,
+  });
+
+  new SuccessResponse({ message: 'OK', metadata: data }).send(res);
+};

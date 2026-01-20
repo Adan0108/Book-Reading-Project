@@ -41,3 +41,18 @@ export const updateChapter = async (req: Request, res: Response) => {
 
   new SuccessResponse({ message: 'Updated', metadata: data }).send(res);
 };
+
+export const listMyBooks = async (req: Request, res: Response) => {
+  const user = (req as any).user;
+  const userId = Number(user?.uid ?? user?.userId);
+
+  const data = await bookService.authorListMyBooks(userId, {
+    query: req.query.query as any,
+    status: req.query.status as any, // DRAFT|PUBLISHED|HIDDEN
+    page: req.query.page as any,
+    limit: req.query.limit as any,
+  });
+
+  new SuccessResponse({ message: 'OK', metadata: data }).send(res);
+};
+

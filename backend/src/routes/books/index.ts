@@ -17,4 +17,7 @@ router.get('/:slug/chapters', asyncHandler(bookController.listBookChapters));
 // Chapter content 
 router.get('/:slug/chapters/:index', optionalAuthenticationV2 ,asyncHandler(bookController.getChapterByIndex));
 
+// Public list by author
+router.get('/:authorId/books', asyncHandler(bookController.listBooksByAuthor));
+
 export default router;

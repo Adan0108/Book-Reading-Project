@@ -315,3 +315,79 @@ export const authorUpdateChapter = async (userId: number, bookId: number, chapte
 
   return { ok: true };
 };
+
+export const listBooksByAuthorPublic = async (q: {
+  authorId: number;
+  query?: string;
+  page?: any;
+  limit?: any;
+}) => {
+  const page = Math.max(1, Number(q.page ?? 1));
+  const limit = Math.min(50, Math.max(1, Number(q.limit ?? 20)));
+
+  const { items, total } = await bookRepo.listBooksByAuthorPublic({
+    authorId: Number(q.authorId),
+    query: q.query,
+    page,
+    limit,
+  });
+
+  return {
+    page,
+    limit,
+    total,
+    items: items.map((b: any) => ({
+      id: b.id,
+      slug: b.slug,
+      title: b.title,
+      synopsis: b.synopsis,
+      coverUrl: b.coverUrl,
+      authorName: b.authorName,
+      visibility: b.visibility,
+      totalChapters: Number(b.totalChapters ?? 0),
+      hasMembersOnlyChapters: Number(b.membersOnlyChapters ?? 0) > 0,
+    })),
+  };
+};
+
+export const authorListMyBooks = async (userId: number, q: {
+  query?: string;
+  status?: any;
+  page?: any;
+  limit?: any;
+}) => {
+  const author = await authorRepo.findAuthorByUserId(userId);
+  if (!author) throw new ForbiddenError('User is not an author');
+
+  const page = Math.max(1, Number(q.page ?? 1));
+  const limit = Math.min(50, Math.max(1, Number(q.limit ?? 20)));
+
+  const status = q.status ? String(q.status).toUpperCase() : undefined;
+
+  const { items, total } = await bookRepo.listMyBooksForAuthor({
+    authorId: author.id,
+    query: q.query,
+    status: status as any,
+    page,
+    limit,
+  });
+
+  return {
+    page,
+    limit,
+    total,
+    items: items.map((b: any) => ({
+      id: b.id,
+      slug: b.slug,
+      title: b.title,
+      synopsis: b.synopsis,
+      coverUrl: b.coverUrl,
+      visibility: b.visibility,
+      status: b.status,
+      totalAllChapters: Number(b.totalAllChapters ?? 0),
+      totalPublishedChapters: Number(b.totalPublishedChapters ?? 0),
+      createdAt: b.created_at,
+      updatedAt: b.updated_at,
+    })),
+  };
+};
