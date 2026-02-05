@@ -227,9 +227,18 @@ export const authorUpdateBook = async (userId: number, bookId: number, body: any
 
   const patch: any = {};
 
-  if (body.title !== undefined) patch.title = String(body.title).trim();
-  if (body.genre !== undefined) patch.genre = String(body.genre).trim();
-  if (body.slug !== undefined) patch.slug = String(body.slug).trim();
+  if (body.title !== undefined) {
+    const t = String(body.title).trim();
+    if (!t) throw new BadRequestError('title cannot be empty');
+    patch.title = t;
+  }
+
+  if (body.genre !== undefined) {
+    const g = String(body.genre).trim();
+    if (!g) throw new BadRequestError('genre cannot be empty');
+    patch.genre = g;
+  }
+  // if (body.slug !== undefined) patch.slug = String(body.slug).trim();
   if (body.synopsis !== undefined) patch.synopsis = String(body.synopsis);
   if (body.coverUrl !== undefined) patch.cover_image_url = String(body.coverUrl);
   if (body.status !== undefined) patch.status = body.status;
@@ -243,9 +252,9 @@ export const authorUpdateBook = async (userId: number, bookId: number, body: any
     await bookRepo.setBookTags(bookId, tags.map((t: any) => t.id));
   }
 
-  // invalidate caches for old & new slug
+  // // invalidate caches for old & new slug
   await cacheDel(`book:${book.slug}`);
-  if (patch.slug && patch.slug !== book.slug) await cacheDel(`book:${patch.slug}`);
+  // if (patch.slug && patch.slug !== book.slug) await cacheDel(`book:${patch.slug}`);
 
   return { ok: true };
 };
