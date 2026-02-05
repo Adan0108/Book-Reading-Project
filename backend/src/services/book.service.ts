@@ -4,10 +4,11 @@ import * as chapterRepo from '../models/repositories/chapter.repo';
 import * as tagRepo from '../models/repositories/tag.repo';
 import * as authorRepo from '../models/repositories/author.repo';
 import * as membershipRepo from '../models/repositories/membership.repo';
-import { cacheDel, cacheGetJson, cacheIncr, cacheSetJson } from '../utils/cache';
+import { cacheDel, cacheGetJson, cacheIncr, cacheSetJson,cacheSetNx } from '../utils/cache';
 
 const BOOK_TTL = 60;      // seconds
 const CHAPTER_TTL = 60;   // seconds
+const BOOK_VIEW_WINDOW = 60 * 30;  // 30 minutes
 
 const slugify = (s: string) =>
   s.toLowerCase()
@@ -33,18 +34,40 @@ export const listBooksPublic = async (q: { query?: string; page?: any; limit?: a
       synopsis: b.synopsis,
       coverUrl: b.coverUrl,
       authorName: b.authorName,
+      viewsCount: Number(b.viewsCount ?? 0),
       totalChapters: Number(b.totalChapters ?? 0),
       hasMembersOnlyChapters: Number(b.membersOnlyChapters ?? 0) > 0,
     })),
   };
 };
 
-export const getBookDetailBySlug = async (slug: string) => {
+export const getBookDetailBySlug = async (
+  slug: string,
+  viewer?: { viewerUserId?: number; viewerIp?: string }
+) => {
   if (!slug?.trim()) throw new BadRequestError('slug is required');
 
   const cacheKey = `book:${slug}`;
   const cached = await cacheGetJson<any>(cacheKey);
-  if (cached) return cached;
+
+  // Build viewer key
+  const viewerKey = viewer?.viewerUserId
+    ? `u:${viewer.viewerUserId}`
+    : `ip:${viewer?.viewerIp ?? 'unknown'}`;
+
+  // Dedup key: only count once per window
+  const viewKey = `view:book:${slug}:${viewerKey}`;
+
+  const shouldCount = await cacheSetNx(viewKey, '1', BOOK_VIEW_WINDOW);
+
+  if (cached) {
+    if (shouldCount) {
+      await bookRepo.incrBookViews(cached.id);
+      cached.viewsCount = Number(cached.viewsCount ?? 0) + 1;
+      await cacheSetJson(cacheKey, cached, BOOK_TTL);
+    }
+    return cached;
+  }
 
   const book = await bookRepo.findBookBySlugPublic(slug);
   if (!book) throw new NotFoundError('Book not found');
@@ -55,6 +78,10 @@ export const getBookDetailBySlug = async (slug: string) => {
   const hasFreeChapters = chapters.some((c: any) => c.visibility === 'PUBLIC' && c.isPublished === 1);
   const hasMembersOnlyChapters = chapters.some((c: any) => c.visibility !== 'PUBLIC' && c.isPublished === 1);
 
+  const baseViews = Number((book as any).views_count ?? 0);
+
+  if (shouldCount) await bookRepo.incrBookViews(book.id);
+
   const payload = {
     id: book.id,
     slug: book.slug,
@@ -63,10 +90,8 @@ export const getBookDetailBySlug = async (slug: string) => {
     synopsis: book.synopsis,
     coverUrl: book.cover_image_url,
     visibility: book.visibility,
-    authorProfile: {
-      id: book.author_id,
-      penName: book.pen_name,
-    },
+    viewsCount: shouldCount ? baseViews + 1 : baseViews,
+    authorProfile: { id: book.author_id, penName: book.pen_name },
     tags,
     totalChapters: chapters.filter((c: any) => c.isPublished === 1).length,
     hasFreeChapters,

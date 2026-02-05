@@ -68,3 +68,11 @@ export async function cacheAside<T>(
   await cacheSetJson(key, fresh, ttlSeconds);
   return fresh;
 }
+
+export async function cacheSetNx(key: string, value: string, ttlSeconds: number): Promise<boolean> {
+  const redis = mustRedis();
+  if (!ttlSeconds || ttlSeconds <= 0) throw new Error('ttlSeconds must be > 0');
+
+  const res = await redis.set(key, value, { NX: true, EX: ttlSeconds });
+  return res === 'OK'; // OK = set success, null = already exists
+}

@@ -118,6 +118,7 @@ export const listBooksPublic = async (params: {
 
   const [rows] = await pool.query(
     `SELECT b.id, b.slug, b.title, b.synopsis, b.cover_image_url AS coverUrl,
+            b.views_count AS viewsCount,
             a.pen_name AS authorName,
             (SELECT COUNT(*) FROM chapters c WHERE c.book_id = b.id AND c.deleted_at IS NULL AND c.is_draft = 0) AS totalChapters,
             (SELECT COUNT(*) FROM chapters c WHERE c.book_id = b.id AND c.deleted_at IS NULL AND c.is_draft = 0 AND c.visibility <> 'PUBLIC') AS membersOnlyChapters
@@ -284,3 +285,13 @@ export const listMyBooksForAuthor = async (params: {
   const total = (countRows as any[])[0]?.total ?? 0;
   return { items: rows as any[], total };
 };
+
+export const incrBookViews = async (bookId: number) => {
+  await pool.query(
+    `UPDATE books
+     SET views_count = views_count + 1
+     WHERE id = ? AND deleted_at IS NULL`,
+    [bookId],
+  );
+};
+

@@ -13,7 +13,19 @@ export const listBooks = async (req: Request, res: Response) => {
 };
 
 export const getBookBySlug = async (req: Request, res: Response) => {
-  const data = await bookService.getBookDetailBySlug(req.params.slug);
+  const user = (req as any).user;
+  const viewerId = user?.uid ?? user?.userId ?? undefined;
+
+  const ip =
+    (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() ||
+    req.socket.remoteAddress ||
+    'unknown';
+
+  const data = await bookService.getBookDetailBySlug(req.params.slug, {
+    viewerUserId: viewerId ? Number(viewerId) : undefined,
+    viewerIp: String(ip),
+  });
+
   new SuccessResponse({ message: 'OK', metadata: data }).send(res);
 };
 
