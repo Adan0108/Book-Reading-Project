@@ -1,78 +1,100 @@
-import React, { useEffect, useRef, useState } from 'react'
-import  Header  from './Header';
-import  Footer  from './Footer';
-import  FeaturedSlider from './FeaturedSlider';
-import  ComicGrid  from './ComicGrid';
-import  Sidebar  from './Sidebar';
-import {driver} from 'driver.js';
+import React, { useEffect } from 'react'
+import Header from './Header';
+import Footer from './Footer';
+import FeaturedSlider from './FeaturedSlider';
+import ComicGrid from './ComicGrid';
+import Sidebar from './Sidebar';
+import { driver } from 'driver.js';
 import 'driver.js/dist/driver.css';
 import { useAuthStore } from '../../store/useAuthStore';
-import type { AuthState } from '../../type/store';
+import { useThemeStore } from '../../store/useThemeStore'; // Adjusted import path based on context
+import TopTrending from './TopTrending';
+import SideDecorations from './SideDecorations';
 
 const driverObj = driver({
+  showProgress: true,
   steps: [
     {
       element: '#tour-search-bar',
       popover: {
-        title: 'Search Here',
-        description: 'You can find your favorite comics in an instant using the search bar',
+        title: 'Tìm Kiếm',
+        description: 'Nhập tên truyện bạn muốn tìm vào đây.',
       }
     },
-
     { 
       element: '#tour-top-comics',
       popover: { 
-        title: 'Top Comics', 
-        description: 'See what comics are trending daily, weekly, or monthly.' 
+        title: 'Bảng Xếp Hạng', 
+        description: 'Xem top truyện được yêu thích nhất theo Ngày, Tuần, Tháng.' 
       } 
     },
-
     { 
       element: '#tour-comic-grid',
       popover: { 
-        title: 'Latest Updates', 
-        description: 'Browse all the latest comic chapters as they are released right here.' 
+        title: 'Truyện Mới', 
+        description: 'Cập nhật các chương truyện mới nhất vừa ra lò.' 
       } 
     },
-
-    {
-      popover: {
-        title: 'Tour Complete!',
-        description: 'You\'re all set. Enjoy exploring the site!'
-      }
-    }
   ]
 })
 
 const HomePage = () => {
 
   const checkAuth = useAuthStore((state) => state.refreshToken);
+  const { isDark } = useThemeStore();
 
-  // Run once on mount
+  // Fallback colors if images don't load
+  const backgroundImage = isDark 
+                          ? { backgroundColor: '#111827' }
+                          : { backgroundColor: '#dfe1e6' };
+
   useEffect(() => {
     checkAuth();
   }, [checkAuth]);
 
-  return (
-    <div className="min-h-screen bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100">
-      <Header onStartTour = {handleStartTour} />
+  // Wrapper function to start tour
+  const handleStartTour = () => {
+    driverObj.drive();
+  };
 
-      {/* Featured Slider - Full width above the columns */}
-      <FeaturedSlider />
+  return (
+    <div 
+      className="min-h-screen text-gray-900 dark:text-gray-100 transition-all duration-500 flex flex-col"
+      style={{
+        ...backgroundImage,
+        backgroundSize: 'cover',
+        backgroundPosition: 'top center',
+        backgroundAttachment: 'fixed',
+        backgroundRepeat: 'no-repeat'
+      }}
+    >
+      <SideDecorations />
+
+      <Header onStartTour={handleStartTour} />
+
+      {/* Featured Slider - Full width container */}
+      <div className="w-full mb-8">
+        <FeaturedSlider />
+      </div>
 
       {/* Main Content Area */}
-      <main className="container mx-auto max-w-7xl p-4">
+      <main className="container mx-auto max-w-7xl px-4 pb-12 flex-grow">
 
-        <div className="flex flex-col lg:flex-row gap-6">
+        <TopTrending />
+        
+        <div className="flex flex-col lg:flex-row gap-8">
           
-          {/* Main Column (Latest Updates) */}
-          <div className="w-full lg:w-2/3">
-            <ComicGrid title="Latest Updates" />
+          {/* Main Column (Latest Updates) - Takes up approx 70% space on large screens */}
+          <div className="w-full lg:w-[70%]">
+            <ComicGrid title="Mới Cập Nhật" />
           </div>
 
-          {/* Sidebar */}
-          <aside className="w-full lg:w-1/3">
-            <Sidebar />
+          {/* Sidebar (Top Follows) - Takes up approx 30% space on large screens */}
+          <aside className="w-full lg:w-[30%]">
+             {/* Sticky wrapper ensures sidebar stays in view if content is long */}
+             <div className="sticky top-4">
+                <Sidebar />
+             </div>
           </aside>
           
         </div>
@@ -81,10 +103,6 @@ const HomePage = () => {
       <Footer />
     </div>
   )
-}
-
-function handleStartTour() {
-  driverObj.drive(); // This one command starts the whole tour
 }
 
 export default HomePage
