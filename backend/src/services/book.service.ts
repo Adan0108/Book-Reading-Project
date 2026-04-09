@@ -425,3 +425,73 @@ export const authorListMyBooks = async (userId: number, q: {
     })),
   };
 };
+
+export const authorGetBookDetail = async (userId: number, bookId: number) => {
+  const author = await authorRepo.findAuthorByUserId(userId);
+  if (!author) throw new ForbiddenError('User is not an author');
+
+  const book = await bookRepo.findBookByIdForAuthor(bookId, author.id);
+  if (!book) throw new NotFoundError('Book not found');
+
+  const tags = await bookRepo.getBookTags(book.id);
+
+  // includes drafts/scheduled
+  const chapters = await chapterRepo.listChapterHeadersByBookForAuthor(book.id, author.id);
+
+  return {
+    id: book.id,
+    slug: book.slug,
+    title: book.title,
+    genre: book.genre,
+    synopsis: book.synopsis,
+    coverUrl: book.cover_image_url,
+    visibility: book.visibility,
+    status: book.status,
+    createdAt: book.created_at,
+    updatedAt: book.updated_at,
+    tags,
+    chapters: chapters.map((c: any) => ({
+      id: c.id,
+      index: c.index,
+      title: c.title,
+      slug: c.slug,
+      visibility: c.visibility,
+      isDraft: Boolean(c.is_draft),
+      scheduledAt: c.scheduled_at,
+      publishedAt: c.published_at,
+    })),
+  };
+};
+
+export const authorGetChapterDetail = async (
+  userId: number,
+  bookId: number,
+  chapterId: number,
+) => {
+  const author = await authorRepo.findAuthorByUserId(userId);
+  if (!author) throw new ForbiddenError('User is not an author');
+
+  const book = await bookRepo.findBookByIdForAuthor(bookId, author.id);
+  if (!book) throw new NotFoundError('Book not found');
+
+  const chapter = await chapterRepo.findChapterByIdForAuthor(chapterId, author.id);
+  if (!chapter || Number(chapter.book_id) !== Number(bookId)) {
+    throw new NotFoundError('Chapter not found');
+  }
+
+  return {
+    id: chapter.id,
+    bookId: chapter.book_id,
+    index: chapter.chapter_no,
+    title: chapter.title,
+    slug: chapter.slug,
+    contentMarkdown: chapter.content_md,
+    wordCount: chapter.word_count,
+    visibility: chapter.visibility,
+    isDraft: Boolean(chapter.is_draft),
+    scheduledAt: chapter.scheduled_at,
+    publishedAt: chapter.published_at,
+    createdAt: chapter.created_at,
+    updatedAt: chapter.updated_at,
+  };
+};

@@ -99,3 +99,34 @@ export const updateChapter = async (chapterId: number, authorId: number, patch: 
 
   return (res as any).affectedRows as number;
 };
+
+export const listChapterHeadersByBookForAuthor = async (bookId: number, authorId: number) => {
+  const [rows] = await pool.query(
+    `SELECT id,
+            chapter_no AS \`index\`,
+            title,
+            slug,
+            visibility,
+            is_draft,
+            scheduled_at,
+            published_at
+     FROM chapters
+     WHERE book_id = ? AND author_id = ? AND deleted_at IS NULL
+     ORDER BY chapter_no ASC`,
+    [bookId, authorId],
+  );
+
+  return rows as any[];
+};
+
+export const findChapterByIdForAuthor = async (chapterId: number, authorId: number) => {
+  const [rows] = await pool.query(
+    `SELECT *
+     FROM chapters
+     WHERE id = ? AND author_id = ? AND deleted_at IS NULL
+     LIMIT 1`,
+    [chapterId, authorId],
+  );
+
+  return (rows as any[])[0] || null;
+};
