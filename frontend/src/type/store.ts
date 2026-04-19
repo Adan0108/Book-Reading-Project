@@ -1,5 +1,5 @@
 export interface AuthState {
-    authUser: { id?: number, email: string, username?: string } | null;
+    authUser: { id?: number, email: string, username?: string, roles?: string[]; } | null;
     accessToken: string | null;
     isSigningUp: boolean;
     isLoggingIn: boolean;

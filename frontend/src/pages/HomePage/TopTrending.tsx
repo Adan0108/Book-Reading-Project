@@ -56,18 +56,22 @@ const TopTrending = () => {
         {/* BUTTONS */}
         <div className="flex items-center gap-2">
             <button
-              ref={prevRef}
-              className="w-9 h-9 rounded-full flex items-center justify-center transition-all 
-                         bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-md border border-gray-200 dark:border-gray-600
-                         hover:bg-red-600 hover:text-white hover:border-red-600 active:scale-95"
+                ref={prevRef}
+                className={`w-9 h-9 rounded-full flex items-center justify-center transition-all shadow-md border hover:bg-red-600 hover:text-white hover:border-red-600 active:scale-95 ${
+                    isDark 
+                        ? 'bg-gray-700 text-white border-gray-600' 
+                        : 'bg-white text-gray-900 border-gray-200'
+                }`}
             >
               <ChevronLeft />
             </button>
             <button
-              ref={nextRef}
-              className="w-9 h-9 rounded-full flex items-center justify-center transition-all 
-                         bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-md border border-gray-200 dark:border-gray-600
-                         hover:bg-red-600 hover:text-white hover:border-red-600 active:scale-95"
+                ref={nextRef}
+                className={`w-9 h-9 rounded-full flex items-center justify-center transition-all shadow-md border hover:bg-red-600 hover:text-white hover:border-red-600 active:scale-95 ${
+                    isDark 
+                        ? 'bg-gray-700 text-white border-gray-600' 
+                        : 'bg-white text-gray-900 border-gray-200'
+                }`}
             >
               <ChevronRight />
             </button>
@@ -154,7 +158,7 @@ const TopTrending = () => {
 
 
                   {/* --- 3. CARD (FRONT) --- */}
-                  <div className="relative z-10 shadow-sm hover:shadow-xl rounded-lg bg-white dark:bg-gray-800">
+                  <div className= {`relative z-10 shadow-sm hover:shadow-xl rounded-lg ${isDark ? 'bg-gray-800' : 'bg-white'} `}>
                       <ComicCard
                           title={comic.title}
                           imageUrl={comic.imageUrl}

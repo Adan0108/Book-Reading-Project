@@ -2,6 +2,7 @@ import React, { useRef, useState } from 'react'
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { Navigation } from 'swiper/modules';
 import ComicCard, { type ChapterInfo } from './ComicCard'
+import { useThemeStore } from '@/store/useThemeStore';
 
 // --- Icons ---
 const ChevronLeft = () => (
@@ -43,14 +44,15 @@ const ComicGrid = ({ title }: ComicGridProps) => {
   const nextRef = useRef<HTMLButtonElement>(null);
   const [isBeginning, setIsBeginning] = useState(true);
   const [isEnd, setIsEnd] = useState(false);
+  const { isDark } = useThemeStore();
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 min-h-[600px] flex flex-col relative ">
+    <div className= {`${isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} rounded-lg shadow-sm border p-4 min-h-[600px] flex flex-col relative `}>
       
       {/* --- HEADER --- */}
-      <div className="flex items-center justify-between mb-6 border-b border-gray-100 dark:border-gray-700 pb-2">
+      <div className= {`flex items-center justify-between mb-6 border-b pb-2 ${isDark ? 'border-gray-700' : 'border-gray-100'}`}>
         {/* Title */}
-        <h2 className="text-2xl font-bold text-gray-800 dark:text-white uppercase flex items-center gap-2">
+        <h2 className= {`text-2xl font-bold   uppercase flex items-center gap-2 ${isDark ? 'text-white' : 'text-gray-800'}`}>
            <span className="text-yellow-500 text-3xl">❖</span> {title}
         </h2>
 
@@ -64,14 +66,14 @@ const ComicGrid = ({ title }: ComicGridProps) => {
           <div className="flex items-center gap-2">
             <button
               ref={prevRef}
-              className="w-8 h-8 rounded-full border border-gray-300 dark:border-gray-600 flex items-center justify-center transition-all hover:bg-yellow-500 hover:text-white hover:border-yellow-500 text-gray-600 dark:text-gray-300 cursor-pointer active:scale-95"
+              className= {`w-8 h-8 rounded-full border ${isDark ? 'border-gray-600 text-gray-300' : 'border-gray-300 text-gray-600'} flex items-center justify-center transition-all hover:bg-yellow-500 hover:text-white hover:border-yellow-500 cursor-pointer active:scale-95`}
             >
               <ChevronLeft />
             </button>
 
             <button
               ref={nextRef}
-              className="w-8 h-8 rounded-full border border-gray-300 dark:border-gray-600 flex items-center justify-center transition-all hover:bg-yellow-500 hover:text-white hover:border-yellow-500 text-gray-600 dark:text-gray-300 cursor-pointer active:scale-95"
+              className= {`w-8 h-8 rounded-full border ${isDark ? 'border-gray-600 text-gray-300' : 'border-gray-300 text-gray-600'} flex items-center justify-center transition-all hover:bg-yellow-500 hover:text-white hover:border-yellow-500 cursor-pointer active:scale-95`}
             >
               <ChevronRight />
             </button>

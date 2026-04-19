@@ -1,3 +1,4 @@
+import { useThemeStore } from '@/store/useThemeStore';
 import React, { useState } from 'react'
 
 type TabType = 'daily' | 'weekly' | 'monthly'
@@ -11,6 +12,7 @@ const genres = [
 
 const Sidebar = () => {
   const [activeTab, setActiveTab] = useState<TabType>('daily');
+  const { isDark } = useThemeStore();
 
   return (
     <div className="sticky top-4 space-y-6">
@@ -35,23 +37,25 @@ const Sidebar = () => {
       `}</style>
 
       {/* Top Comics Module */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+      <div className= {`${isDark ? 'dark:bg-gray-800 dark:border-gray-700' : 'bg-white border-gray-200'} rounded-lg shadow-sm border overflow-hidden `}>
         
         {/* Header */}
-        <div className="p-4 border-b border-gray-200 dark:border-gray-700">
-          <h3 className="text-lg font-bold text-gray-800 dark:text-white uppercase flex items-center gap-2">
+        <div className= {`p-4 border-b ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
+          <h3 className= {`text-lg font-bold ${isDark ? 'text-white' : 'text-gray-800'}   uppercase flex items-center gap-2`}>
             <span className="text-yellow-500">★</span> Top Theo Dõi
           </h3>
         </div>
 
         {/* Tabs */}
-        <div className="flex text-sm font-medium bg-gray-50 dark:bg-gray-700">
+        <div className= {`flex text-sm font-medium ${isDark ? 'bg-gray-700' : 'bg-gray-50'}`}>
           <button
             onClick={() => setActiveTab('daily')}
             className={`flex-1 py-2 text-center transition-colors ${
               activeTab === 'daily'
-                ? 'bg-white dark:bg-gray-800 text-yellow-600 border-t-2 border-yellow-500 font-bold' 
-                : 'text-gray-500 hover:text-gray-700 dark:text-gray-400'
+                  ? `text-yellow-600 border-t-2 border-yellow-500 font-bold ${isDark ? 'bg-gray-800' : 'bg-white'}`
+                  : isDark 
+                      ? 'text-gray-400 hover:text-gray-300' 
+                      : 'text-gray-500 hover:text-gray-700'
             }`}
           >
             Ngày
@@ -60,8 +64,10 @@ const Sidebar = () => {
             onClick={() => setActiveTab('weekly')}
             className={`flex-1 py-2 text-center transition-colors ${
               activeTab === 'weekly'
-                 ? 'bg-white dark:bg-gray-800 text-yellow-600 border-t-2 border-yellow-500 font-bold' 
-                 : 'text-gray-500 hover:text-gray-700 dark:text-gray-400'
+                  ? `text-yellow-600 border-t-2 border-yellow-500 font-bold ${isDark ? 'bg-gray-800' : 'bg-white'}`
+                  : isDark 
+                      ? 'text-gray-400 hover:text-gray-300' 
+                      : 'text-gray-500 hover:text-gray-700'
             }`}
           >
             Tuần
@@ -70,8 +76,10 @@ const Sidebar = () => {
             onClick={() => setActiveTab('monthly')}
             className={`flex-1 py-2 text-center transition-colors ${
               activeTab === 'monthly'
-                 ? 'bg-white dark:bg-gray-800 text-yellow-600 border-t-2 border-yellow-500 font-bold' 
-                 : 'text-gray-500 hover:text-gray-700 dark:text-gray-400'
+                  ? `text-yellow-600 border-t-2 border-yellow-500 font-bold ${isDark ? 'bg-gray-800' : 'bg-white'}`
+                  : isDark 
+                      ? 'text-gray-400 hover:text-gray-300' 
+                      : 'text-gray-500 hover:text-gray-700'
             }`}
           >
             Tháng
@@ -80,12 +88,12 @@ const Sidebar = () => {
 
         {/* Top Comics List */}
         {/* We keep key={activeTab} on the UL to reset the list when tab changes */}
-        <ul key={activeTab} className="divide-y divide-gray-200 dark:divide-gray-700">
+        <ul key={activeTab} className= {`divide-y ${isDark ? 'divide-gray-700' : 'divide-gray-200'}`}>
           {topComicsData[activeTab].map((comic: any, index: number) => (
             <li 
               key={comic.id} 
               // 2. Add 'animate-stagger' class
-              className="flex items-start gap-3 p-3 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors cursor-pointer group animate-stagger"
+              className= {`flex items-start gap-3 p-3 ${isDark ? 'hover:bg-gray-700/50' : 'hover:bg-gray-50'} transition-colors cursor-pointer group animate-stagger`}
               // 3. Dynamic Delay: Index * 100ms (0ms, 100ms, 200ms, etc.)
               style={{ animationDelay: `${index * 100}ms` }}
             >
@@ -104,7 +112,7 @@ const Sidebar = () => {
 
               {/* Info */}
               <div className="flex-1 min-w-0">
-                <a href="#" className="block text-sm font-bold text-gray-800 dark:text-gray-200 truncate group-hover:text-yellow-500 mb-1 transition-colors">
+                <a href="#" className= {`block text-sm font-bold ${isDark ? 'text-gray-200' : 'text-gray-800'}  truncate group-hover:text-yellow-500 mb-1 transition-colors`}>
                   {comic.title}
                 </a>
                 <div className="flex items-center justify-between text-xs text-gray-500">
@@ -121,14 +129,14 @@ const Sidebar = () => {
       </div>
 
       {/* Genres Module */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
-        <h3 className="text-lg font-bold mb-4 text-gray-800 dark:text-white border-l-4 border-yellow-500 pl-2">Thể Loại</h3>
+      <div className= {`${isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} rounded-lg shadow-sm border p-4`}>
+        <h3 className= {`text-lg font-bold mb-4 ${isDark ? 'text-white' : 'text-gray-800'} border-l-4 border-yellow-500 pl-2`}>Thể Loại</h3>
         <div className="flex flex-wrap gap-2">
           {genres.map((genre) => (
             <a
               key={genre}
               href="#"
-              className="bg-gray-100 dark:bg-gray-700 text-xs px-3 py-1.5 rounded hover:bg-yellow-500 hover:text-white transition-colors text-gray-600 dark:text-gray-300"
+              className={`${isDark ? 'bg-gray-700 text-gray-300' : 'bg-gray-100 text-gray-600'} text-xs px-3 py-1.5 rounded hover:bg-yellow-500 hover:text-white transition-colors`}
             >
               {genre}
             </a>

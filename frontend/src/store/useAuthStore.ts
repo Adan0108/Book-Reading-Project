@@ -129,6 +129,10 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
                     localStorage.setItem('userId', data.metadata.user.id.toString());
                 }
 
+                if (data.metadata.tokens.accessToken) {
+                    localStorage.setItem('accessToken', data.metadata.tokens.accessToken);
+                }
+
                 // 1. Set the token FIRST so the subsequent request is authenticated
                 set({ 
                     accessToken: data.metadata.tokens.accessToken, 
@@ -165,7 +169,8 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
             if (!userId) {
                 // Just clear local state if we don't have an ID
                 set({ authUser: null, emailToVerify: null, accessToken: null });
-                localStorage.removeItem('userId'); 
+                localStorage.removeItem('userId');
+                localStorage.removeItem('accessToken'); 
                 return;
             }
 
@@ -263,13 +268,15 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
             try{
                 
                 const accessToken = await authService.refreshToken();
-                
                 console.log("Token refreshed:", accessToken);
+                
+                // ADD THIS LINE: Save the newly minted token to localStorage!
+                localStorage.setItem('accessToken', accessToken);
                 
                 // 2. Set the token immediately so fetchMe can use it
                 set({ accessToken });
 
-                // 3. Chain the call: Now that we have a token, get the user details
+                // 3. Chain the call
                 await get().fetchMe();
             }
             catch (error){

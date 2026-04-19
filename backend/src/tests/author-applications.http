@@ -1,0 +1,102 @@
+@baseUrl = http://localhost:3000
+@adminId = 27
+@userId = 26
+@adminToken = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1aWQiOjI3LCJlbWFpbCI6InRlc3RhZG1pbkBleGFtcGxlLmNvbSIsImp0aSI6IjYyM2I1ODQyLWYyZjQtNDBkZS04YThjLTc1ZTIxYzA1M2MwMCIsImlhdCI6MTc3MzU1OTUwNiwiZXhwIjoxNzczNzMyMzA2fQ.80Su9JaSvbMYyIrb2JLzAqLlQDWW52Lcs-u20SNwI7Q
+@userToken = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1aWQiOjI2LCJlbWFpbCI6InRlc3R1c2VyQGV4YW1wbGUuY29tIiwianRpIjoiNGEwZmY3N2QtNzljMi00NmE5LWI3Y2EtMDhhNjBhMzRmODNiIiwiaWF0IjoxNzczNTU5NDc0LCJleHAiOjE3NzM3MzIyNzR9.RJ1hvgqp2GIZNBj8MBviXCV-haniKYohOhAElnqI3qU
+
+### 1. Submit author application
+POST {{baseUrl}}/v1/api/author-applications
+x-client-id: {{userId}}
+Authorization: Bearer {{userToken}}
+Content-Type: application/json
+
+{
+  "penName": "Nani",
+  "applicationTitle": "Request to become an Author",
+  "sampleTitle": "The Last Train",
+  "sampleStory": "Celebrating My Certification and Software Development Achievements! I'm thrilled to share that I'm currently a third-year Software Engineering student at the University of Technology Sydney and just earned recognition on the UTS Dean's List 2025, UTS Faculty of Engineering and IT. Recently, I developed a JavaScript-based backend for an e-commerce application, significantly enhancing my skills in cloud computing by using AWS services such as EC2, CloudFront, and S3. I've also started exploring Java Spring Boot to deepen my backend development expertise. Additionally, I've been actively learning DevOps practices, specifically focusing on Docker and setting up CI/CD pipelines. These skills have significantly broadened my understanding of automation and modern infrastructure management. My professional experience includes an internship at OPTIK Consultancy, where I designed and developed a mobile application using TypeScript with React Native. My contributions spanned both frontend and backend development, ensuring an outstanding user experience. Here are some notable projects I've completed over the past year. LMS App (Learning Management System internship): Developed a React Native app with structured learning modules, video playback tracking, and progress monitoring, integrating backend APIs with TypeScript and MongoDB. Badminton Booking System: Built an online booking platform using ASP.NET Core and SQL Server, complete with user authentication and role-based access control. E-Commerce Backend (Professional Design): Designed a scalable backend suitable for multi-shop platforms akin to Shopee and Amazon, integrating robust CI/CD pipelines and comprehensive AWS infrastructure. E-Commerce Web Application: Created a full-stack platform using JavaScript, Node.js, and MongoDB, featuring user authentication, product management, and responsive design. Currently, I am actively exploring internship and entry-level opportunities in software engineering, particularly backend development and infrastructure support. I am eager to join a dynamic team to continue developing my professional skills and contributing to meaningful projects. Celebrating My Certification and Software Development Achievements! I'm thrilled to share that I'm currently a third-year Software Engineering student at the University of Technology Sydney and just earned recognition on the UTS Dean's List 2025, UTS Faculty of Engineering and IT. Recently, I developed a JavaScript-based backend for an e-commerce application, significantly enhancing my skills in cloud computing by using AWS services such as EC2, CloudFront, and S3. I've also started exploring Java Spring Boot to deepen my backend development expertise. Additionally, I've been actively learning DevOps practices, specifically focusing on Docker and setting up CI/CD pipelines. These skills have significantly broadened my understanding of automation and modern infrastructure management.",
+  "bio": "I enjoy writing fantasy and romance stories.",
+  "motivation": "I want to share my stories with readers on the platform.",
+  "genres": ["Fantasy", "Drama"],
+  "portfolioLinks": ["https://example.com/portfolio"],
+  "extra": {
+    "language": "en"
+  }
+}
+
+### 2. Get my latest application
+GET {{baseUrl}}/v1/api/author-applications/me/latest
+x-client-id: {{userId}}
+Authorization: Bearer {{userToken}}
+
+### 3. Submit again -> should fail with 409 if active app exists
+POST {{baseUrl}}/v1/api/author-applications
+x-client-id: {{userId}}
+Authorization: Bearer {{userToken}}
+Content-Type: application/json
+
+{
+  "penName": "Quang Anh",
+  "applicationTitle": "Second request",
+  "sampleTitle": "Another Story",
+  "sampleStory": "This is my long sample story text. Make sure this is at least 800 characters long. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum. Continue writing more text here so that the request clearly passes the minimum length validation and simulates a real author submission sample for testing the endpoint properly in Postman."
+}
+
+### 4. Admin list pending applications
+GET {{baseUrl}}/v1/api/admin/author-applications?status=PENDING&page=1&limit=20
+x-client-id: {{adminId}}
+Authorization: Bearer {{adminToken}}
+
+### 5. Admin get detail for application 1
+GET {{baseUrl}}/v1/api/admin/author-applications/1
+x-client-id: {{adminId}}
+Authorization: Bearer {{adminToken}}
+
+### 6. Admin mark under review
+PATCH {{baseUrl}}/v1/api/admin/author-applications/1/mark-under-review
+x-client-id: {{adminId}}
+Authorization: Bearer {{adminToken}}
+
+### 7. User withdraw application 1
+PATCH {{baseUrl}}/v1/api/author-applications/1/withdraw
+x-client-id: {{userId}}
+Authorization: Bearer {{userToken}}
+
+### 8. Submit again after withdraw
+POST {{baseUrl}}/v1/api/author-applications
+x-client-id: {{userId}}
+Authorization: Bearer {{userToken}}
+Content-Type: application/json
+
+{
+  "penName": "Nani",
+  "applicationTitle": "Second valid request",
+  "sampleTitle": "Second Story",
+  "sampleStory": "Celebrating My Certification and Software Development Achievements! I'm thrilled to share that I'm currently a third-year Software Engineering student at the University of Technology Sydney and just earned recognition on the UTS Dean's List 2025, UTS Faculty of Engineering and IT. Recently, I developed a JavaScript-based backend for an e-commerce application, significantly enhancing my skills in cloud computing by using AWS services such as EC2, CloudFront, and S3. I've also started exploring Java Spring Boot to deepen my backend development expertise. Additionally, I've been actively learning DevOps practices, specifically focusing on Docker and setting up CI/CD pipelines. These skills have significantly broadened my understanding of automation and modern infrastructure management. My professional experience includes an internship at OPTIK Consultancy, where I designed and developed a mobile application using TypeScript with React Native. My contributions spanned both frontend and backend development, ensuring an outstanding user experience. Here are some notable projects I've completed over the past year. LMS App (Learning Management System internship): Developed a React Native app with structured learning modules, video playback tracking, and progress monitoring, integrating backend APIs with TypeScript and MongoDB. Badminton Booking System: Built an online booking platform using ASP.NET Core and SQL Server, complete with user authentication and role-based access control. E-Commerce Backend (Professional Design): Designed a scalable backend suitable for multi-shop platforms akin to Shopee and Amazon, integrating robust CI/CD pipelines and comprehensive AWS infrastructure. E-Commerce Web Application: Created a full-stack platform using JavaScript, Node.js, and MongoDB, featuring user authentication, product management, and responsive design. Currently, I am actively exploring internship and entry-level opportunities in software engineering, particularly backend development and infrastructure support. I am eager to join a dynamic team to continue developing my professional skills and contributing to meaningful projects. Celebrating My Certification and Software Development Achievements! I'm thrilled to share that I'm currently a third-year Software Engineering student at the University of Technology Sydney and just earned recognition on the UTS Dean's List 2025, UTS Faculty of Engineering and IT. Recently, I developed a JavaScript-based backend for an e-commerce application, significantly enhancing my skills in cloud computing by using AWS services such as EC2, CloudFront, and S3. I've also started exploring Java Spring Boot to deepen my backend development expertise. Additionally, I've been actively learning DevOps practices, specifically focusing on Docker and setting up CI/CD pipelines. These skills have significantly broadened my understanding of automation and modern infrastructure management.",
+  "bio": "Second application bio",
+  "motivation": "Second application motivation"
+}
+
+### 9. Admin approve application 2
+POST {{baseUrl}}/v1/api/admin/author-applications/2/approve
+x-client-id: {{adminId}}
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "decisionReason": "Approved. Writing sample is acceptable.",
+  "internalNotes": "Looks legitimate."
+}
+
+### 10. User tries to submit again after becoming author -> should fail
+POST {{baseUrl}}/v1/api/author-applications
+x-client-id: {{userId}}
+Authorization: Bearer {{userToken}}
+Content-Type: application/json
+
+{
+  "penName": "Nini",
+  "applicationTitle": "Third request",
+  "sampleTitle": "Third Story",
+  "sampleStory": "Celebrating My Certification and Software Development Achievements! I'm thrilled to share that I'm currently a third-year Software Engineering student at the University of Technology Sydney and just earned recognition on the UTS Dean's List 2025, UTS Faculty of Engineering and IT. Recently, I developed a JavaScript-based backend for an e-commerce application, significantly enhancing my skills in cloud computing by using AWS services such as EC2, CloudFront, and S3. I've also started exploring Java Spring Boot to deepen my backend development expertise. Additionally, I've been actively learning DevOps practices, specifically focusing on Docker and setting up CI/CD pipelines. These skills have significantly broadened my understanding of automation and modern infrastructure management. My professional experience includes an internship at OPTIK Consultancy, where I designed and developed a mobile application using TypeScript with React Native. My contributions spanned both frontend and backend development, ensuring an outstanding user experience. Here are some notable projects I've completed over the past year. LMS App (Learning Management System internship): Developed a React Native app with structured learning modules, video playback tracking, and progress monitoring, integrating backend APIs with TypeScript and MongoDB. Badminton Booking System: Built an online booking platform using ASP.NET Core and SQL Server, complete with user authentication and role-based access control. E-Commerce Backend (Professional Design): Designed a scalable backend suitable for multi-shop platforms akin to Shopee and Amazon, integrating robust CI/CD pipelines and comprehensive AWS infrastructure. E-Commerce Web Application: Created a full-stack platform using JavaScript, Node.js, and MongoDB, featuring user authentication, product management, and responsive design. Currently, I am actively exploring internship and entry-level opportunities in software engineering, particularly backend development and infrastructure support. I am eager to join a dynamic team to continue developing my professional skills and contributing to meaningful projects. Celebrating My Certification and Software Development Achievements! I'm thrilled to share that I'm currently a third-year Software Engineering student at the University of Technology Sydney and just earned recognition on the UTS Dean's List 2025, UTS Faculty of Engineering and IT. Recently, I developed a JavaScript-based backend for an e-commerce application, significantly enhancing my skills in cloud computing by using AWS services such as EC2, CloudFront, and S3. I've also started exploring Java Spring Boot to deepen my backend development expertise. Additionally, I've been actively learning DevOps practices, specifically focusing on Docker and setting up CI/CD pipelines. These skills have significantly broadened my understanding of automation and modern infrastructure management.",
+}
