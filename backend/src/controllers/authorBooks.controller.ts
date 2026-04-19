@@ -56,3 +56,24 @@ export const listMyBooks = async (req: Request, res: Response) => {
   new SuccessResponse({ message: 'OK', metadata: data }).send(res);
 };
 
+export const getMyBookDetail = async (req: Request, res: Response) => {
+  const user = (req as any).user;
+  const userId = Number(user?.uid ?? user?.userId);
+
+  const bookId = Number(req.params.bookId);
+  const data = await bookService.authorGetBookDetail(userId, bookId);
+
+  new SuccessResponse({ message: 'OK', metadata: data }).send(res);
+};
+
+export const getMyChapterDetail = async (req: Request, res: Response) => {
+  const user = (req as any).user;
+  const userId = Number(user?.uid ?? user?.userId);
+
+  const bookId = Number(req.params.bookId);
+  const chapterId = Number(req.params.chapterId);
+
+  const data = await bookService.authorGetChapterDetail(userId, bookId, chapterId);
+  new SuccessResponse({ message: 'OK', metadata: data }).send(res);
+};
+
