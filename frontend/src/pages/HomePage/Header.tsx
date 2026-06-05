@@ -37,9 +37,26 @@ const SearchBar = ({ isDark }: { isDark: boolean }) => {
       if (query.trim()) {
         setIsSearching(true);
         try {
-          const response = await bookService.getBooks({ query, limit: 5 });
+          const response = await bookService.getBooks({ query, limit: 1000 });
           const fetchedBooks = response.metadata?.items || [];
-          setResults(fetchedBooks);
+
+          const sortedBooks = fetchedBooks.sort((a: Book, b: Book) => {
+            const searchLower = query.toLowerCase();
+            const aTitle = a.title.toLowerCase();
+            const bTitle = b.title.toLowerCase();
+            
+            // Give priority to comics that actually START with the search term
+            const aStarts = aTitle.startsWith(searchLower);
+            const bStarts = bTitle.startsWith(searchLower);
+            
+            if (aStarts && !bStarts) return -1;
+            if (!aStarts && bStarts) return 1;
+            
+            // Sort remaining matches numerically (so 1 comes before 11, and 11 before 100)
+            return aTitle.localeCompare(bTitle, undefined, { numeric: true, sensitivity: 'base' });
+          });
+
+          setResults(sortedBooks);
           setShowDropdown(true);
           
         } catch (error) {
@@ -80,7 +97,7 @@ const SearchBar = ({ isDark }: { isDark: boolean }) => {
 
       {/* Live Search Dropdown */}
       {showDropdown && results.length > 0 && (
-        <div className={`absolute top-full left-0 right-0 mt-2 rounded-lg shadow-lg overflow-hidden z-50 border
+        <div className={`absolute top-full left-0 right-0 mt-2 rounded-lg shadow-lg z-50 border max-h-[300px] overflow-y-auto overflow-x-hidden
           ${isDark ? "bg-gray-800 border-gray-700 text-white" : "bg-white border-gray-200 text-gray-900"}`}
         >
           {results.map((book) => (
