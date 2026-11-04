@@ -1,6 +1,7 @@
 import {create} from 'zustand';
 import {toast} from 'sonner';
 import { authService } from '../services/authService';
+import {isAxiosError} from 'axios';
 import type { AuthState } from '../type/store';
 
 export const useAuthStore = create<AuthState>()((set, get) => ({
@@ -264,10 +265,11 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
                 // 2. Set the token immediately so fetchMe can use it
                 set({ accessToken });
 
-                // 3. Chain the call
-                await get().fetchMe();
+                // Profile failures must propagate so an outage is not treated as a restored session.
+                set({authUser:await authService.fetchMe()});
             }
-            catch{
+            catch(error){
+                if(!isAxiosError(error)||error.response?.status!==401)throw error;
                 // If refresh fails, clear everything including localStorage
                 localStorage.removeItem('userId');
                 localStorage.removeItem('accessToken');
@@ -285,20 +287,9 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
         fetchMe: async () => {
             set({ isFetchingUser: true });
             try {
-                const data = await authService.fetchMe();
-
-                // --- FIX 3: Drill down into 'metadata' ---
-                // Your backend returns { message: "...", metadata: { id: 1, ... } }
-                // So we must store data.metadata, not the whole data object
-                if (data.metadata) {
-                    set({ authUser: data.metadata });
-                } else {
-                    // Fallback in case your API structure varies
-                    set({ authUser: data });
-                }
-
-            } catch {
-                set({ authUser: null, accessToken: null });
+                set({authUser:await authService.fetchMe()});
+            } catch(error) {
+                if(isAxiosError(error)&&error.response?.status===401)set({ authUser: null, accessToken: null });
             } finally {
                 set({ isFetchingUser: false });
             }

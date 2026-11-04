@@ -242,6 +242,9 @@ const Header = ({ onStartTour }: HeaderProps) => {
                     </div>
 
                     <div className="p-2">
+                      <button onClick={()=>{setShowUserMenu(false);navigate('/account/memberships');}} className="w-full text-left px-3 py-2 text-sm rounded-lg">My memberships</button>
+                      {authUser.roles?.includes('AUTHOR')&&<button onClick={()=>{setShowUserMenu(false);navigate('/author/memberships');}} className="w-full text-left px-3 py-2 text-sm rounded-lg">Manage memberships</button>}
+                      {authUser.roles?.includes('ADMIN')&&<button onClick={()=>{setShowUserMenu(false);navigate('/admin/membership-policy');}} className="w-full text-left px-3 py-2 text-sm rounded-lg">Membership policy</button>}
                       <button onClick={() => { setShowUserMenu(false); navigate('/account/author-application'); }} className="w-full text-left px-3 py-2 text-sm rounded-lg">Author application</button>
                       {authUser.roles?.includes('ADMIN') && <button onClick={() => { setShowUserMenu(false); navigate('/admin/applications'); }} className="w-full text-left px-3 py-2 text-sm rounded-lg">Review authors</button>}
                       <button onClick={() => { setShowUserMenu(false); navigate('/profile'); }} className={`w-full text-left px-3 py-2 text-sm rounded-lg flex items-center gap-3 transition-colors ${isDark ? 'hover:bg-gray-800' : 'hover:bg-gray-100'}`}>

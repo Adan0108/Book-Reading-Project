@@ -9,7 +9,7 @@ const router = Router();
 router.get('/', asyncHandler(bookController.listBooks));
 
 // Book detail
-router.get('/:slug', asyncHandler(bookController.getBookBySlug));
+router.get('/:slug', optionalAuthenticationV2,asyncHandler(bookController.getBookBySlug));
 
 // TOC headers 
 router.get('/:slug/chapters', optionalAuthenticationV2, asyncHandler(bookController.listBookChapters));

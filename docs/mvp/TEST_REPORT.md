@@ -1,6 +1,6 @@
 # Current implementation verification
 
-4 November 2026 (Australia/Sydney). Run commands from the named package directory using `npm.cmd` on this Windows host. Earlier audit evidence remains historical.
+Updated 5 November 2026 (Australia/Sydney). Run commands from the named package directory using `npm.cmd` on this Windows host. Earlier audit evidence remains historical.
 
 ## Authentication milestone (`bac8f04`, merge `4e602cd`)
 
@@ -49,3 +49,20 @@ Representative screenshot artifacts (ignored by Git, recreated by the full brows
 - `frontend/test-results/autosave-autosave-creates--1d63c--made-during-a-pending-save-chromium/studio-mobile.png`
 
 Desktop studio and mobile reader screenshots were visually inspected. The authoring engine is dynamically loaded; the main chunk remains about 800 kB / 249 kB gzip and the author-only chunk about 998 kB / 308 kB gzip. The build succeeds with chunk-size and existing DaisyUI/Node warnings. Full 100-file maximum-size stress and physical touch-device testing are not claimed.
+
+## Author tier and entitlement milestone (`feat/author-memberships`)
+
+5 November 2026, isolated QA schema only.
+
+| Command | Observed result |
+|---|---|
+| `backend`: `$env:PUBLISHING_TEST_DATABASE='publishing_qa'; npm.cmd test` | 63 passed in seven files |
+| `backend`: `npm.cmd run typecheck`, `npm.cmd run build` | Passed; no backend lint script is configured |
+| `frontend`: `npm.cmd run typecheck`, `npm.cmd run lint`, `npm.cmd test`, `npm.cmd run build` | Passed; 12 frontend tests. Existing chunk/CSS/Node warnings remain |
+| `frontend`: `npm.cmd run test:e2e` | All seven headed Chromium journeys passed; six retained Cloudinary uploads across the two media journeys |
+
+New real-MySQL checks cover concurrent tier creation, fixed prices and versioned admin audits, wrong-author/tier rejection, restricted parent/public child checks through warmed caches, scheduled releases, expired/future/overlapping legacy grants, suspended authors, redacted post feeds, cancellation ownership and paid-period retention. Pure policy tests cover chapter/post/chat consistency and exclude administrators from private chat eligibility without membership or author identity.
+
+The new browser journey configures two author tiers and a tier-restricted post/chapter, verifies guest and lower-tier denials, exercises manual QA renewal cancellation, upgrades the isolated fixture to check authorized reads, restores optional authentication on full reload, injects session/profile 503 responses and verifies recovery, checks mobile width, and saves admin pricing policy. Manual fixture grants are not provider checkout evidence. Payment checkout and conversations are not yet implemented.
+
+The optional-auth bug was reproduced because public feeds return 200 guest teasers, so response-triggered refresh alone never restored the saved session. Restoration now precedes those requests. Temporary service errors retain the saved identifier for retry; actual authentication failures clear it.

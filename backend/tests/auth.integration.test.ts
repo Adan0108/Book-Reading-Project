@@ -4,6 +4,7 @@ import jwt from 'jsonwebtoken';
 import express from 'express';
 import cookieParser from 'cookie-parser';
 import request from 'supertest';
+import {configureQaEnvironment} from './qa-environment';
 // Delivery boundary only: real OTP generation, bcrypt, MySQL, Redis, JWT and middleware.
 const inbox = vi.hoisted(() => new Map<string,string>());
 vi.mock('../src/utils/sendMail', () => ({ default: async ({email,data}: {email:string;data:{otp:string}}) => { inbox.set(email,data.otp); } }));
@@ -22,9 +23,7 @@ describe.skipIf(!enabled)('real MySQL authentication and author provisioning', (
   let sessionCookie:string;
   const headers = () => ({'x-client-id':String(uid),Authorization:`Bearer ${tokens.accessToken}`});
   beforeAll(async () => {
-    process.env.MYSQL_HOST='127.0.0.1'; process.env.MYSQL_PORT='3307';
-    process.env.MYSQL_USER='root'; process.env.MYSQL_PASSWORD='publishing-qa-local'; process.env.MYSQL_DB='publishing_qa';
-    process.env.REDIS_HOST='127.0.0.1'; process.env.REDIS_PORT='6379';
+    configureQaEnvironment();
     ({pool}=await import('../src/dbs/init.mysql'));
     const {runMigrationsOnce}=await import('../src/dbs/migrate'); await runMigrationsOnce(); await runMigrationsOnce();
     redis=await import('../src/dbs/init.redis'); await redis.initRedis();

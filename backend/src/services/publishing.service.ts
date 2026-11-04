@@ -1,6 +1,7 @@
 import { randomUUID, createHash } from 'crypto';
 import {parseNovelDocument,documentSummary} from '../domain/novelDocument';
 import {getChapterDocument,saveChapterDocument} from '../models/repositories/chapterDocument.repo';
+import {setResourceTiers} from '../models/repositories/membership.repo';
 import type { PoolConnection } from 'mysql2/promise';
 import { pool } from '../dbs/init.mysql';
 import cloudinary from '../configs/cloudinary.config';
@@ -158,6 +159,7 @@ export async function savePublication(userId: number, body: any, kind: 'book' | 
           await db.query('INSERT IGNORE INTO book_tags (book_id,tag_id) SELECT ?,id FROM tags WHERE slug=?', [bookId,slug]);
         }
       }
+      await setResourceTiers(db,'book',bookId!,authorId,visibility,body.requiredTierIds);
       output = { id: bookId, slug: b.slug };
     } else {
       if (!b) throw new NotFoundError('Book not found');
@@ -188,7 +190,7 @@ export async function savePublication(userId: number, body: any, kind: 'book' | 
       if (scheduled !== undefined) {
         const date = scheduled ? new Date(scheduled) : null;
         if (date && !Number.isFinite(date.getTime())) throw new BadRequestError('Invalid scheduled date');
-        await db.query('UPDATE chapters SET scheduled_at=? WHERE id=?', [date,chapterId]);
+        await db.query('UPDATE chapters SET scheduled_at=FROM_UNIXTIME(?) WHERE id=?', [date?date.getTime()/1000:null,chapterId]);
       }
       if (body.wordCount !== undefined && !document) {
         if (!Number.isSafeInteger(body.wordCount) || body.wordCount < 0) throw new BadRequestError('Invalid word count');
@@ -198,10 +200,11 @@ export async function savePublication(userId: number, body: any, kind: 'book' | 
       if (!isDraft && body.publishedAt) {
         const date = new Date(body.publishedAt);
         if (!Number.isFinite(date.getTime())) throw new BadRequestError('Invalid publication date');
-        await db.query('UPDATE chapters SET published_at=? WHERE id=?', [date,chapterId]);
+        await db.query('UPDATE chapters SET published_at=FROM_UNIXTIME(?) WHERE id=?', [date.getTime()/1000,chapterId]);
       }
       await db.query('DELETE FROM chapter_images WHERE chapter_id=?', [chapterId]);
       for (const [order,id] of ids.entries()) await db.query('INSERT INTO chapter_images (chapter_id,asset_id,page_order) VALUES (?,?,?)', [chapterId,id,order+1]);
+      await setResourceTiers(db,'chapter',chapterId!,authorId,visibility,body.requiredTierIds);
       output = { chapterId, chapterNo, bookId, slug: b.slug };
     }
     await db.query('INSERT INTO publishing_requests (author_id,request_id,payload_hash,result_json) VALUES (?,?,?,?)', [authorId,body.requestId,hash,JSON.stringify(output)]);

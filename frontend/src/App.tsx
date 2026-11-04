@@ -19,6 +19,12 @@ import AuthorGuard from './features/author/AuthorGuard'
 import AccountGuard from './features/account/AccountGuard'
 import AuthorApplicationPage from './pages/AuthorApplicationPage'
 import AdminApplicationsPage from './pages/AdminApplicationsPage'
+import AuthorMembershipsPage from './pages/AuthorMembershipsPage'
+import AdminMembershipPolicyPage from './pages/AdminMembershipPolicyPage'
+import AuthorPlansPage from './pages/AuthorPlansPage'
+import MyMembershipsPage from './pages/MyMembershipsPage'
+import AuthorPostsPage from './pages/AuthorPostsPage'
+import AuthorFeedPage from './pages/AuthorFeedPage'
 
 
 const App = () => {
@@ -33,14 +39,20 @@ const App = () => {
         <Route path="/comic/:slug" element={<BookDetailPage />} />
         <Route path="/comic/:slug/chapters/:chapterNo" element={<ChapterReadingPage />} />
         <Route path="/author/:authorId" element={<AuthorProfilePage />} />
+        <Route path="/author/:authorId/memberships" element={<AuthorPlansPage/>}/>
+        <Route path="/author/:authorId/posts" element={<AuthorFeedPage/>}/>
+        <Route element={<AccountGuard/>}><Route path="/account/memberships" element={<MyMembershipsPage/>}/></Route>
         <Route element={<AccountGuard />}><Route path="/account/author-application" element={<AuthorApplicationPage/>}/></Route>
         <Route element={<AccountGuard role="ADMIN"/>}><Route path="/admin/applications" element={<AdminApplicationsPage/>}/></Route>
+        <Route element={<AccountGuard role="ADMIN"/>}><Route path="/admin/membership-policy" element={<AdminMembershipPolicyPage/>}/></Route>
         <Route element={<AuthorGuard />}>
         <Route path="/author/comic/create" element={<CreateBookPage />} />
         <Route path="/author/comic/:bookId/edit" element={<EditBookPage />} />
         <Route path="/author/comic/:bookId/chapter/create" element={<CreateChapterPage />} />
         <Route path="/author/comic/:bookId/chapter/:chapterId/edit" element={<EditChapterPage />} />
         <Route path="/author/dashboard" element={<AuthorDashboardPage />} />
+        <Route path="/author/memberships" element={<AuthorMembershipsPage/>}/>
+        <Route path="/author/posts" element={<AuthorPostsPage/>}/>
         </Route>
 
         {/* Auth Pages */}

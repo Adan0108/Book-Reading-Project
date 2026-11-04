@@ -83,7 +83,8 @@ export const findBookBySlugPublic = async (slug: string) => {
     `SELECT b.*, a.pen_name
      FROM books b
      JOIN authors a ON a.id = b.author_id
-     WHERE b.slug = ? AND b.deleted_at IS NULL AND b.status = 'PUBLISHED'
+     JOIN users u ON u.id=a.user_id
+     WHERE b.slug = ? AND b.deleted_at IS NULL AND b.status = 'PUBLISHED' AND a.is_approved=1 AND u.state=1
      LIMIT 1`,
     [slug],
   );
