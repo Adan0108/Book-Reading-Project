@@ -68,7 +68,7 @@ test("author tiers, admin pricing, paid parent/chapter/post gates and reader can
     .selectOption(String(tierTwo.id));
   await page.getByLabel("Keep as a draft").uncheck();
   await page.getByRole("button", { name: "Save post", exact: true }).click();
-  await expect(page.getByRole("status")).toHaveText("Post saved.");
+  await expect(page.getByRole("status",{name:"Post save progress"})).toHaveText("Post saved.");
   const bookResponse = await request.post(
     "http://localhost:3000/v1/api/authors/me/books",
     {

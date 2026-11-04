@@ -1,17 +1,42 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
+import { isAxiosError } from "axios";
 import { Link } from "react-router-dom";
 import api from "../lib/axios";
-import { message } from "../features/author/images";
+import { ImageEditor } from "../features/author/ImageEditor";
+import UnsavedWork from "../features/author/UnsavedWork";
+import {
+  message,
+  releaseImage,
+  uploadImages,
+  type EditorImage,
+} from "../features/author/images";
 import type { AuthorPost, AuthorTier } from "../features/membership/types";
-
+const empty = {
+  title: "",
+  body: "",
+  visibility: "PUBLIC",
+  minimumTierId: "",
+  isDraft: true,
+  isSpoiler: false,
+};
 export default function AuthorPostsPage() {
   const [posts, setPosts] = useState<AuthorPost[]>([]),
     [tiers, setTiers] = useState<AuthorTier[]>([]),
-    [editing, setEditing] = useState<AuthorPost | null>(null),
+    [editing, setEditing] = useState<number | null>(null),
+    [form, setForm] = useState(empty),
+    [images, setImages] = useState<EditorImage[]>([]),
+    [dirty, setDirty] = useState(false),
     [error, setError] = useState(""),
     [status, setStatus] = useState(""),
+    [loading, setLoading] = useState(true),
     [busy, setBusy] = useState(false),
-    [loading, setLoading] = useState(true);
+    [uncertain, setUncertain] = useState(false);
+  const lock = useRef(false),
+    pending = useRef<{
+      url: string;
+      method: string;
+      data: Record<string, unknown>;
+    } | null>(null);
   async function load() {
     const [list, plans] = await Promise.all([
       api.get("/authors/me/posts"),
@@ -21,78 +46,171 @@ export default function AuthorPostsPage() {
     setTiers(plans.data.metadata.tiers);
   }
   useEffect(() => {
+    let mounted = true;
     load()
-      .catch((e: unknown) => setError(message(e)))
-      .finally(() => setLoading(false));
+      .catch((e) => {
+        if (mounted) setError(message(e));
+      })
+      .finally(() => {
+        if (mounted) setLoading(false);
+      });
+    return () => {
+      mounted = false;
+    };
   }, []);
-  async function save(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (busy) return;
+  function clear() {
+    images.forEach(releaseImage);
+    setImages([]);
+    setEditing(null);
+    setForm(empty);
+    setDirty(false);
+    pending.current = null;
+    setUncertain(false);
+  }
+  function edit(post: AuthorPost) {
+    if (dirty && !window.confirm("Discard unsaved post changes?")) return;
+    clear();
+    setEditing(post.id);
+    setForm({
+      title: post.title,
+      body: post.body ?? "",
+      visibility: post.visibility,
+      minimumTierId: String(post.minimumTierId ?? ""),
+      isDraft: Boolean(post.isDraft),
+      isSpoiler: Boolean(post.isSpoiler),
+    });
+    setImages(
+      (post.images ?? []).map((i) => ({
+        id: i.id,
+        assetId: i.id,
+        previewUrl: i.imageUrl,
+        status: "uploaded",
+      })),
+    );
+    setStatus("");
+    setError("");
+    window.scrollTo({ top: 0 });
+  }
+  async function save(e: FormEvent) {
+    e.preventDefault();
+    if (lock.current) return;
+    lock.current = true;
     setBusy(true);
     setError("");
     setStatus("");
-    const values = new FormData(event.currentTarget),
-      minimum = String(values.get("minimumTierId") ?? "");
+    let committed = false;
     try {
-      await api.request({
-        url: `/authors/me/posts${editing ? `/${editing.id}` : ""}`,
-        method: editing ? "PATCH" : "POST",
-        data: {
-          title: values.get("title"),
-          body: values.get("body"),
-          visibility: values.get("visibility"),
-          isDraft: values.has("isDraft"),
-          ...(minimum ? { minimumTierId: Number(minimum) } : {}),
-        },
-      });
-      await load();
-      setEditing(null);
+      if (!pending.current) {
+        const ids = await uploadImages(
+          images,
+          "post",
+          undefined,
+          (image) =>
+            setImages((current) =>
+              current.map((i) => (i.id === image.id ? image : i)),
+            ),
+          (done, total) =>
+            setStatus(
+              total ? `Uploading artwork ${done} of ${total}…` : "Saving post…",
+            ),
+        );
+        pending.current = {
+          url: `/authors/me/posts${editing ? `/${editing}` : ""}`,
+          method: editing ? "PATCH" : "POST",
+          data: {
+            ...form,
+            minimumTierId:
+              form.visibility === "TIERS"
+                ? Number(form.minimumTierId)
+                : undefined,
+            imageAssetIds: ids,
+            requestId: crypto.randomUUID(),
+          },
+        };
+      }
+      await api.request(pending.current);
+      committed = true;
+      clear();
       setStatus("Post saved.");
+      await load();
     } catch (e) {
-      setError(message(e));
+      if (committed)
+        setError(`Post saved, but the list could not reload. ${message(e)}`);
+      else {
+        setError(message(e));
+        if (pending.current) {
+          const ambiguous =
+            !isAxiosError(e) || !e.response || e.response.status >= 500;
+          if (ambiguous) setUncertain(true);
+          else {
+            pending.current = null;
+            setUncertain(false);
+          }
+        }
+      }
     } finally {
+      lock.current = false;
       setBusy(false);
     }
   }
+  const hidden = posts.find((p) => p.id === editing)?.moderationHidden;
   return (
-    <main className="min-h-screen bg-base-200 p-6">
+    <main id="main-content" className="min-h-screen bg-base-200 p-4 sm:p-6">
+      <UnsavedWork dirty={dirty} saving={busy} />
       <div className="max-w-4xl mx-auto space-y-6">
-        <nav className="flex gap-5">
-          <Link to="/author/dashboard">← My books</Link>
+        <nav className="flex flex-wrap gap-5">
+          <Link to="/author/dashboard">My books</Link>
           <Link to="/author/memberships">Memberships</Link>
         </nav>
         <h1 className="text-3xl font-bold">Author posts</h1>
         <p>
-          Share updates publicly or with your members. Membership rules are
-          checked before a reader receives the post text.
+          Share text updates with your readers or members. Artwork is optional.
+          Mark story details as spoilers so readers can choose to reveal them.
         </p>
         {error && (
           <p role="alert" className="alert alert-error">
             {error}
           </p>
         )}
-        {status && <p role="status">{status}</p>}
+        {status && (
+          <p role="status" aria-label="Post save progress">
+            {status}
+          </p>
+        )}
         {loading ? (
           <p role="status">Loading posts…</p>
         ) : (
           <>
-            <form
-              key={editing?.id ?? `new-${posts.length}`}
-              onSubmit={save}
-              className="card bg-base-100 p-6 space-y-4"
-            >
+            <form onSubmit={save} className="card bg-base-100 p-5 space-y-4">
               <h2 className="text-xl font-bold">
                 {editing ? "Edit post" : "New post"}
               </h2>
-              {editing?.moderationHidden&&<p role="note" className="alert alert-warning">This post is hidden by moderation. Saving does not restore public access. {editing.moderationReason}</p>}
-              <fieldset disabled={busy} className="space-y-4">
+              {hidden && (
+                <p role="note" className="alert alert-warning">
+                  Hidden by moderation. Saving does not restore public access.
+                </p>
+              )}
+              {uncertain && (
+                <p role="note">
+                  The save response was uncertain. Retry the same save to
+                  confirm its result before editing further.
+                </p>
+              )}
+              <fieldset
+                disabled={busy || uncertain}
+                className="space-y-4"
+                onChange={() => setDirty(true)}
+              >
                 <label className="block">
                   Post title
                   <input
                     name="title"
                     required
                     maxLength={180}
-                    defaultValue={editing?.title ?? ""}
+                    value={form.title}
+                    onChange={(e) =>
+                      setForm({ ...form, title: e.target.value })
+                    }
                     className="input input-bordered w-full"
                   />
                 </label>
@@ -101,9 +219,10 @@ export default function AuthorPostsPage() {
                   <textarea
                     aria-label="Post text"
                     name="body"
-                    maxLength={20000}
                     rows={8}
-                    defaultValue={editing?.body ?? ""}
+                    maxLength={20000}
+                    value={form.body}
+                    onChange={(e) => setForm({ ...form, body: e.target.value })}
                     className="textarea textarea-bordered w-full"
                   />
                 </label>
@@ -111,8 +230,10 @@ export default function AuthorPostsPage() {
                   Post access
                   <select
                     aria-label="Post access"
-                    name="visibility"
-                    defaultValue={editing?.visibility ?? "PUBLIC"}
+                    value={form.visibility}
+                    onChange={(e) =>
+                      setForm({ ...form, visibility: e.target.value })
+                    }
                     className="select select-bordered w-full"
                   >
                     <option value="PUBLIC">Public</option>
@@ -124,8 +245,10 @@ export default function AuthorPostsPage() {
                   Required tier, when restricted
                   <select
                     aria-label="Required tier, when restricted"
-                    name="minimumTierId"
-                    defaultValue={editing?.minimumTierId ?? ""}
+                    value={form.minimumTierId}
+                    onChange={(e) =>
+                      setForm({ ...form, minimumTierId: e.target.value })
+                    }
                     className="select select-bordered w-full"
                   >
                     <option value="">No specific tier</option>
@@ -136,67 +259,111 @@ export default function AuthorPostsPage() {
                     ))}
                   </select>
                 </label>
-                <label className="flex items-center gap-3">
+                <label className="flex gap-3">
+                  <input
+                    type="checkbox"
+                    checked={form.isSpoiler}
+                    onChange={(e) =>
+                      setForm({ ...form, isSpoiler: e.target.checked })
+                    }
+                    className="checkbox"
+                  />
+                  Contains spoilers
+                </label>
+                <label className="flex gap-3">
                   <input
                     name="isDraft"
                     type="checkbox"
-                    defaultChecked={editing?.isDraft ?? true}
+                    checked={form.isDraft}
+                    onChange={(e) =>
+                      setForm({ ...form, isDraft: e.target.checked })
+                    }
                     className="checkbox"
                   />
                   Keep as a draft
                 </label>
-                <button type="submit" className="btn btn-primary">
-                  {busy ? "Saving…" : "Save post"}
+              </fieldset>
+              <ImageEditor
+                artwork
+                images={images}
+                disabled={busy || uncertain}
+                onChange={(next) => {
+                  setImages(next);
+                  setDirty(true);
+                }}
+              />
+              <div className="flex flex-wrap gap-3">
+                <button className="btn btn-primary" disabled={busy}>
+                  {busy
+                    ? "Saving…"
+                    : uncertain
+                      ? "Retry same save"
+                      : "Save post"}
                 </button>
-                {editing && (
+                {(editing || dirty) && (
                   <button
                     type="button"
-                    className="btn ml-2"
-                    onClick={() => setEditing(null)}
+                    className="btn"
+                    disabled={busy}
+                    onClick={() => {
+                      if (
+                        !dirty ||
+                        window.confirm(
+                          "Discard unsaved changes? An uncertain save may already exist.",
+                        )
+                      )
+                        clear();
+                    }}
                   >
                     Cancel edit
                   </button>
                 )}
-              </fieldset>
+              </div>
             </form>
-            <section className="space-y-4" aria-label="Your posts">
+            <section aria-label="Your posts" className="space-y-4">
               <h2 className="text-xl font-bold">Your posts</h2>
-              {posts.length === 0 ? (
-                <p>No updates yet.</p>
-              ) : (
+              {posts.length ? (
                 posts.map((post) => (
                   <article
                     key={post.id}
-                    className="card bg-base-100 p-5 flex-row justify-between gap-4"
+                    className="card bg-base-100 p-5 flex-row flex-wrap justify-between gap-4"
                   >
-                    <div>
+                    <div className="min-w-0 break-words">
                       <h3 className="font-semibold">{post.title}</h3>
-                      {post.moderationHidden&&<p className="text-warning">Hidden by moderation</p>}
                       <p>
                         {post.isDraft ? "Draft" : "Published"} ·{" "}
-                        {post.visibility === "PUBLIC"
-                          ? "Public"
-                          : post.visibility === "MEMBERS"
-                            ? "Members"
-                            : "Required tier"}
+                        {post.visibility} {post.isSpoiler ? "· Spoilers" : ""}
                       </p>
+                      {post.moderationHidden && (
+                        <p className="text-warning">Hidden by moderation</p>
+                      )}
                     </div>
                     <button
                       className="btn"
-                      disabled={busy}
-                      onClick={() => {
-                        setEditing(post);
-                        setStatus("");
-                        window.scrollTo({ top: 0, behavior: "smooth" });
-                      }}
+                      disabled={busy || uncertain}
+                      onClick={() => edit(post)}
                     >
                       Edit {post.title}
                     </button>
                   </article>
                 ))
+              ) : (
+                <p>No updates yet.</p>
               )}
             </section>
           </>
+        )}
+        {!loading && error && (
+          <button
+            className="btn"
+            disabled={busy}
+            onClick={() => {
+              setError("");
+              void load().catch((e) => setError(message(e)));
+            }}
+          >
+            Reload posts
+          </button>
         )}
       </div>
     </main>

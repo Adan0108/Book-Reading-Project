@@ -32,8 +32,10 @@ export interface Membership {
   provider: string;
 }
 export interface AuthorPost {
-  moderationHidden?:boolean;
-  moderationReason?:string|null;
+  isSpoiler?: boolean;
+  images?: { id: string; imageUrl: string; pageOrder: number }[];
+  moderationHidden?: boolean;
+  moderationReason?: string | null;
   id: number;
   authorId?: number;
   title: string;

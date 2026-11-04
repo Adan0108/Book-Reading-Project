@@ -32,7 +32,7 @@ export function message(error: unknown) {
 }
 // Three workers; each network stage gets one automatic retry. Confirm first on retry
 // so a lost Cloudinary response never causes the same successful file to be uploaded again.
-export async function uploadImages(images: EditorImage[], purpose: 'cover' | 'chapter', bookId: number | undefined,
+export async function uploadImages(images: EditorImage[], purpose: 'cover' | 'chapter' | 'post', bookId: number | undefined,
   update: (image: EditorImage) => void, progress: (completed: number, total: number) => void) {
   let next = 0;
   let completed = images.filter(i => i.assetId).length;

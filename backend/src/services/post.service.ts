@@ -1,10 +1,17 @@
 import type { RowDataPacket, ResultSetHeader } from "mysql2/promise";
+import { randomUUID, createHash } from "crypto";
+import {
+  attachable,
+  postImages,
+} from "../models/repositories/publishingAsset.repo";
+import { validateAssetIds } from "./publishing.service";
 import { pool } from "../dbs/init.mysql";
 import { withTransaction } from "../dbs/transaction";
 import {
   BadRequestError,
   ForbiddenError,
   NotFoundError,
+  ConflictRequestError,
 } from "../core/error.response";
 import { positiveId, boundedText, booleanValue } from "../domain/validation";
 import { ownedAuthor } from "./membership.service";
@@ -24,9 +31,33 @@ export async function savePost(
   idValue?: unknown,
 ) {
   const id = idValue === undefined ? null : positiveId(idValue, "post");
+  const requestId = body.requestId ?? randomUUID();
+  if (
+    typeof requestId !== "string" ||
+    !/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+      requestId,
+    )
+  )
+    throw new BadRequestError("Invalid requestId");
+  const hash = createHash("sha256")
+    .update(JSON.stringify({ body, kind: "post", id }))
+    .digest("hex");
   return withTransaction(async (db) => {
     const author = await ownedAuthor(userId, db, true),
       authorId = Number(author.id);
+    const [requests] = await db.query<RowDataPacket[]>(
+      "SELECT * FROM publishing_requests WHERE author_id=? AND request_id=?",
+      [authorId, requestId],
+    );
+    if (requests[0]) {
+      if (requests[0].payload_hash !== hash)
+        throw new ConflictRequestError(
+          "This save key was already used for different content",
+        );
+      return typeof requests[0].result_json === "string"
+        ? JSON.parse(requests[0].result_json)
+        : requests[0].result_json;
+    }
     const [rows] = id
       ? await db.query<RowDataPacket[]>(
           "SELECT * FROM author_posts WHERE id=? AND author_id=? AND deleted_at IS NULL FOR UPDATE",
@@ -35,6 +66,32 @@ export async function savePost(
       : [[]];
     const old = rows[0];
     if (id && !old) throw new NotFoundError("Post unavailable");
+    const [details] = id
+      ? await db.query<RowDataPacket[]>(
+          "SELECT is_spoiler FROM post_details WHERE post_id=?",
+          [id],
+        )
+      : [[]];
+    const spoiler =
+      body.isSpoiler === undefined
+        ? Boolean(details[0]?.is_spoiler)
+        : booleanValue(body.isSpoiler, "Spoiler");
+    const ids =
+      body.imageAssetIds ??
+      (id ? (await postImages([id], db)).map((i) => i.id) : []);
+    validateAssetIds(ids);
+    if (ids.length > 8)
+      throw new BadRequestError("A post can have up to eight optional images");
+    for (const assetId of ids)
+      await attachable(
+        db,
+        assetId,
+        authorId,
+        "post",
+        undefined,
+        undefined,
+        id ?? undefined,
+      );
     const title = boundedText(body.title ?? old?.title, "Post title", 180),
       content = boundedText(
         body.body ?? old?.body ?? "",
@@ -84,19 +141,37 @@ export async function savePost(
       );
       postId = result.insertId;
     }
-    return { id: postId, authorId, isDraft: draft };
+    await db.query(
+      "INSERT INTO post_details(post_id,is_spoiler) VALUES (?,?) ON DUPLICATE KEY UPDATE is_spoiler=VALUES(is_spoiler)",
+      [postId, Number(spoiler)],
+    );
+    await db.query("DELETE FROM post_images WHERE post_id=?", [postId]);
+    for (let index = 0; index < ids.length; index++)
+      await db.query(
+        "INSERT INTO post_images(post_id,asset_id,image_order) VALUES (?,?,?)",
+        [postId, ids[index], index + 1],
+      );
+    const result = { id: postId, authorId, isDraft: draft };
+    await db.query(
+      "INSERT INTO publishing_requests(author_id,request_id,payload_hash,result_json) VALUES (?,?,?,?)",
+      [authorId, requestId, hash, JSON.stringify(result)],
+    );
+    return result;
   });
 }
 export async function myPosts(userId: number) {
   const author = await ownedAuthor(userId);
   const [items] = await pool.query<RowDataPacket[]>(
-    "SELECT p.id,p.title,p.body,p.visibility,p.minimum_tier_id AS minimumTierId,p.is_draft AS isDraft,UNIX_TIMESTAMP(p.published_at) AS publishedEpoch,COALESCE(f.hidden,0) AS moderationHidden,f.reason AS moderationReason FROM author_posts p LEFT JOIN moderation_flags f ON f.kind='POST' AND f.resource_id=p.id WHERE p.author_id=? AND p.deleted_at IS NULL ORDER BY p.id DESC LIMIT 100",
+    "SELECT p.id,p.title,p.body,p.visibility,p.minimum_tier_id AS minimumTierId,p.is_draft AS isDraft,COALESCE(d.is_spoiler,0) AS isSpoiler,UNIX_TIMESTAMP(p.published_at) AS publishedEpoch,COALESCE(f.hidden,0) AS moderationHidden,f.reason AS moderationReason FROM author_posts p LEFT JOIN post_details d ON d.post_id=p.id LEFT JOIN moderation_flags f ON f.kind='POST' AND f.resource_id=p.id WHERE p.author_id=? AND p.deleted_at IS NULL ORDER BY p.id DESC LIMIT 100",
     [author.id],
   );
+  const images = await postImages(items.map((i) => Number(i.id)));
   return {
     items: items.map((row) => ({
       ...row,
       isDraft: Boolean(row.isDraft),
+      isSpoiler: Boolean(row.isSpoiler),
+      images: images.filter((i) => i.postId === Number(row.id)),
       moderationHidden: Boolean(row.moderationHidden),
     })),
   };
@@ -125,17 +200,25 @@ export async function listPublicPosts(
         : positiveId(cursorValue, "cursor"),
     context = await loadEntitlementContext(userId, authorId);
   const [rows] = await pool.query<RowDataPacket[]>(
-    `SELECT p.*,l.level,UNIX_TIMESTAMP(p.published_at) AS publishedEpoch FROM author_posts p LEFT JOIN membership_tier_levels l ON l.tier_id=p.minimum_tier_id
+    `SELECT p.*,COALESCE(d.is_spoiler,0) AS is_spoiler,l.level,UNIX_TIMESTAMP(p.published_at) AS publishedEpoch FROM author_posts p LEFT JOIN post_details d ON d.post_id=p.id LEFT JOIN membership_tier_levels l ON l.tier_id=p.minimum_tier_id
     WHERE p.author_id=? AND p.id<? AND p.deleted_at IS NULL AND p.is_draft=0 AND p.published_at<=NOW() AND ${notHiddenSql("POST", "p")} ORDER BY p.id DESC LIMIT 21`,
     [authorId, cursor],
   );
-  return {
-    items: rows.slice(0, 20).map((row) => {
-      const decision = canViewPost(context, {
+  const items = rows
+    .slice(0, 20)
+    .map((row) => ({
+      row,
+      decision: canViewPost(context, {
         released: true,
         visibility: row.visibility as Visibility,
         rules: postRule(row),
-      });
+      }),
+    }));
+  const images = await postImages(
+    items.filter((i) => i.decision.allowed).map((i) => Number(i.row.id)),
+  );
+  return {
+    items: items.map(({ row, decision }) => {
       return {
         id: Number(row.id),
         authorId,
@@ -143,8 +226,12 @@ export async function listPublicPosts(
         visibility: row.visibility,
         publishedAt: new Date(Number(row.publishedEpoch) * 1000).toISOString(),
         isLocked: !decision.allowed,
+        isSpoiler: Boolean(row.is_spoiler),
         ...(decision.allowed
-          ? { body: row.body }
+          ? {
+              body: row.body,
+              images: images.filter((i) => i.postId === Number(row.id)),
+            }
           : { accessReason: decision.reason }),
       };
     }),
@@ -159,7 +246,7 @@ export async function getPublicPost(
   const authorId = positiveId(authorValue, "author"),
     id = positiveId(idValue, "post");
   const [rows] = await pool.query<RowDataPacket[]>(
-    `SELECT p.*,l.level,(p.is_draft=0 AND p.published_at<=NOW()) AS released FROM author_posts p LEFT JOIN membership_tier_levels l ON l.tier_id=p.minimum_tier_id WHERE p.id=? AND p.author_id=? AND p.deleted_at IS NULL AND ${notHiddenSql("POST", "p")}`,
+    `SELECT p.*,COALESCE(d.is_spoiler,0) AS is_spoiler,l.level,(p.is_draft=0 AND p.published_at<=NOW()) AS released FROM author_posts p LEFT JOIN post_details d ON d.post_id=p.id LEFT JOIN membership_tier_levels l ON l.tier_id=p.minimum_tier_id WHERE p.id=? AND p.author_id=? AND p.deleted_at IS NULL AND ${notHiddenSql("POST", "p")}`,
     [id, authorId],
   );
   if (!rows[0]) throw new NotFoundError("Post unavailable");
@@ -178,5 +265,7 @@ export async function getPublicPost(
     title: row.title,
     body: row.body,
     visibility: row.visibility,
+    isSpoiler: Boolean(row.is_spoiler),
+    images: await postImages([id]),
   };
 }
