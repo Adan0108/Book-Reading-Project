@@ -19,12 +19,13 @@ const user = (process.env.EMAIL_USER || '').trim();
 const pass = (process.env.EMAIL_PASSWORD || '').trim();
 const from = (process.env.EMAIL_FROM || process.env.EMAIL_USER || '').trim();
 const allowSelfSigned = toBool(process.env.EMAIL_ALLOW_SELF_SIGNED);
+if (process.env.NODE_ENV === 'production' && allowSelfSigned) throw new Error('Production SMTP must validate TLS certificates');
 
 const transporter: Transporter = nodemailer.createTransport({
   host, 
   port, 
   secure, // true -> SMTPS(465), false -> STARTTLS(587)
-  auth: { user, pass },
+  auth: user ? { user, pass } : undefined,
   tls: {
     minVersion: 'TLSv1.2',
     rejectUnauthorized: !allowSelfSigned, // <-- dev bypass

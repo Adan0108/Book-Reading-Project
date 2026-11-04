@@ -4,7 +4,7 @@ export const findAuthorByUserId = async (userId: number) => {
   const [rows] = await pool.query(
     `SELECT id, user_id, pen_name, is_approved
      FROM authors
-     WHERE user_id = ?
+     WHERE user_id = ? AND is_approved = 1
      LIMIT 1`,
     [userId],
   );

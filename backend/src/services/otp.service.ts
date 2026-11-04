@@ -57,9 +57,7 @@ export const incrementOtpAttempts = async (userId: number, type: VerificationTyp
 
   if (newAttempts === 1) {
     // On the first failed attempt, set the counter to expire when the OTP expires
-    const otpExpiry = new Date(verification.expires_at).getTime();
-    const now = Date.now();
-    const ttl = Math.floor((otpExpiry - now) / 1000);
+    const ttl = Number(verification.expires_in_seconds);
     if (ttl > 0) {
       await redisClient.expire(attemptsKey, ttl);
     }

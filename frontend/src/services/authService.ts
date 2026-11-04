@@ -1,4 +1,5 @@
 import api from "../lib/axios";
+import {isAxiosError} from 'axios';
 
 export const authService = {
     signUp: async (email: string) => {
@@ -16,8 +17,8 @@ export const authService = {
         return res.data;
     },
 
-    setupPassword: async (email: string, username: string, password: string) => {
-        const res = await api.post('/access/setup-password', { email, username, password }, { withCredentials: true });
+    setupPassword: async (email: string, username: string, password: string, setupToken: string) => {
+        const res = await api.post('/access/setup-password', { email, username, password, setupToken }, { withCredentials: true });
         return res.data;
     },
 
@@ -42,6 +43,12 @@ export const authService = {
     },
 
     refreshToken: async () => {
+        try {
+            const session=await api.post('/access/session',{});
+            return session.data.metadata.tokens.accessToken;
+        } catch(error) {
+            if(!isAxiosError(error)||error.response?.status!==401) throw error;
+        }
         const res = await api.post('/access/refresh', {}, { withCredentials: true });
         return res.data.metadata.tokens.accessToken;
     },

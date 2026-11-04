@@ -24,7 +24,7 @@ export async function findActiveOtpByType(
   type: VerificationType
 ): Promise<UserVerification | null> {
   const [rows] = await pool.query(
-    `SELECT * FROM user_verifications
+    `SELECT *, TIMESTAMPDIFF(SECOND,NOW(),expires_at) AS expires_in_seconds FROM user_verifications
      WHERE user_id = ? AND type = ? AND is_verified = 0 AND expires_at > NOW()
      ORDER BY created_at DESC
      LIMIT 1`,
@@ -194,6 +194,7 @@ export async function cleanupStaleUsers(hoursAgo: number = 24): Promise<number> 
     DELETE FROM users
     WHERE
       (state = 0 OR state = 2)
+      AND password_hash = '---PENDING_SETUP---'
       AND created_at < (NOW() - INTERVAL ? HOUR)
     `,
     [hoursAgo]

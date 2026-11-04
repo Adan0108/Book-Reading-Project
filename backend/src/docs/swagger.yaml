@@ -12,12 +12,20 @@ components:
     bearerAuth:
       type: http
       scheme: bearer
-      bearerFormat: JWT
+      bearerFormat: RS256 JWT
     clientId:
       type: apiKey
       in: header
       name: x-client-id
       description: User ID required for authentication
+    refreshCookie:
+      type: apiKey
+      in: cookie
+      name: rt
+    accessCookie:
+      type: apiKey
+      in: cookie
+      name: at
 
 tags:
   - name: Authentication
@@ -88,7 +96,18 @@ paths:
                   example: "123456"
       responses:
         200:
-          description: Email verified successfully
+          description: Email verified; metadata.setupToken contains a single-use proof valid for ten minutes
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  metadata:
+                    type: object
+                    properties:
+                      setupToken:
+                        type: string
+                        pattern: '^[a-f0-9]{64}$'
         400:
           description: Invalid OTP or User not found
         401:
@@ -105,7 +124,7 @@ paths:
           application/json:
             schema:
               type: object
-              required: [email, password, username]
+              required: [email, password, username, setupToken]
               properties:
                 email:
                   type: string
@@ -113,7 +132,12 @@ paths:
                 password:
                   type: string
                   format: password
+                  minLength: 12
+                  description: Maximum 72 UTF-8 bytes
                   example: "StrongPass123!"
+                setupToken:
+                  type: string
+                  pattern: '^[a-f0-9]{64}$'
                 username:
                   type: string
                   example: "bookworm99"
@@ -148,7 +172,7 @@ paths:
     post:
       tags: [Authentication]
       summary: User Login
-      description: Authenticates user and returns Access Token + Sets Refresh Cookie.
+      description: Returns a fifteen-minute access token and sets HttpOnly access and refresh cookies. Refresh tokens are never returned in JSON. Auth responses are not cacheable; rate limiting returns 429.
       requestBody:
         required: true
         content:
@@ -190,8 +214,6 @@ paths:
                         type: object
                         properties:
                           accessToken:
-                            type: string
-                          refreshToken:
                             type: string
         400:
           description: Missing credentials
@@ -254,7 +276,7 @@ paths:
       summary: Logout (Protected)
       security:
         - bearerAuth: []
-        - clientId: []
+          clientId: []
       parameters:
         - in: header
           name: x-client-id
@@ -272,9 +294,10 @@ paths:
     post:
       tags: [Authentication]
       summary: Refresh Tokens
-      description: Uses Refresh Token cookie to issue new pair.
+      description: Atomically rotates the refresh cookie and returns a new access token. Reuse revokes this session family. All active sessions are revoked after password reset.
       security:
         - clientId: []
+          refreshCookie: []
       parameters:
         - in: header
           name: x-client-id
@@ -287,5 +310,33 @@ paths:
           description: Tokens refreshed successfully
         401:
           description: Invalid Refresh Token or Client ID
-        404:
-          description: Key pair not found
+        403:
+          description: Untrusted browser origin
+
+  /v1/api/access/session:
+    post:
+      tags: [Authentication]
+      summary: Restore the same unexpired access token without refresh rotation
+      security:
+        - clientId: []
+          accessCookie: []
+      responses:
+        200:
+          description: metadata.tokens.accessToken contains the validated existing access token; no cookie is renewed
+        401:
+          description: Access cookie expired, revoked or invalid; attempt refresh once
+        403:
+          description: Untrusted browser origin
+
+  /v1/api/access/logout-all:
+    post:
+      tags: [Authentication]
+      summary: Revoke all user sessions and clear browser cookies
+      security:
+        - bearerAuth: []
+          clientId: []
+      responses:
+        200:
+          description: All existing access and refresh tokens are denied on subsequent requests
+        401:
+          description: Invalid access token or client ID

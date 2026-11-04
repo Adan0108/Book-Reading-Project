@@ -1,381 +1,114 @@
-import bcrypt from "bcrypt";
-import crypto from "node:crypto";
-import * as UserRepo from "../models/repositories/user.repo";
-import * as ProfileRepo from "../models/repositories/userProfile.repo";
-import * as KeysRepo from "../models/repositories/userKeys.repo";
-import type { UserKeysRow } from "../models/repositories/userKeys.repo";
-import type { User } from "../models/user.model";
-import {
-  AuthFailureError,
-  BadRequestError,
-  ConflictRequestError,
-} from "../core/error.response";
-import { createTokenPair, revokeToken } from "../auth/checkAuth";
-import * as OtpService from "./otp.service";
-import { getRedis } from "../dbs/init.redis";
-import { RedisErrorResponse } from "../core/error.response";
+import bcrypt from 'bcrypt';
+import { randomBytes, createHash } from 'node:crypto';
+import type { PoolConnection, RowDataPacket } from 'mysql2/promise';
+import { BadRequestError, ConflictRequestError, AuthFailureError } from '../core/error.response';
+import { pool } from '../dbs/init.mysql';
+import { withTransaction } from '../dbs/transaction';
+import * as UserRepo from '../models/repositories/user.repo';
+import * as OtpService from './otp.service';
+import { issueSession, rotateSession, revokeSession, type SessionPayload } from './session.service';
 
-/** Register:
- * - create user
- * - create profile (username = user<id>)
- * - assign READER role
- * - generate per-user key pair
- * - return tokens
-// export async function register(email: string, password: string): Promise<{
-//   user: Pick<User, "id" | "email">;
-//   tokens: { accessToken: string; refreshToken: string };
-// }> {
-//   const existing = await findByEmail(email);
-//   if (existing) throw new BadRequestError("Email already registered");
+export function normalizeEmail(value: unknown): string {
+  if (typeof value !== 'string' || value.length > 100 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim())) throw new BadRequestError('Enter a valid email address');
+  return value.trim().toLowerCase();
+}
+export function validatePassword(value: unknown): asserts value is string {
+  if (typeof value !== 'string' || value.length < 12 || Buffer.byteLength(value,'utf8') > 72) throw new BadRequestError('Use at least 12 characters and at most 72 UTF-8 bytes for your password');
+}
+const digest = (value: string) => createHash('sha256').update(value).digest('hex');
+const pending = (u: { state: number; password_hash: string }) => [0,2].includes(u.state) && u.password_hash === '---PENDING_SETUP---';
 
-//   const hash = await bcrypt.hash(password, 12);
-//   const user = await createUser(email, hash);
-//   const id = Number(user.id);
-
-//   // profile
-//   await createProfile(id, `user${id}`);
-
-//   // role
-//   await addRole(id, "READER");
-
-//   // key pair (hex strings; consider KMS later)
-//   const publicKey = crypto.randomBytes(64).toString("hex");
-//   const privateKey = crypto.randomBytes(64).toString("hex");
-//   await upsertKeys(id, publicKey, privateKey);
-
-//   const tokens = await createTokenPair({ uid: id, email }, publicKey, privateKey);
-//   return { user: { id, email: user.email }, tokens };
-// }
- */
-
-/**
- * Step 1: Submit email, create inactive user, send OTP.
- */
-export async function registerEmail(email: string) {
+async function sendCode(email: string, type: 'EMAIL_OTP' | 'RESET') {
   let user = await UserRepo.findByEmail(email);
-
-  const redisClient = getRedis();
-  if (!redisClient) throw new RedisErrorResponse("Redis not ready");
-
-  // 1. Check if user already exists
-  if (user) {
-    if (user.state === 1) {
-      // state 1 = ACTIVE
-      throw new ConflictRequestError("Email already registered");
-    }
-    // If user is state 0 (inactive) or 2 (pending password), we can proceed.
+  if (type === 'RESET' && (!user || user.state !== 1)) return { message:'If this account is active, a reset code will be sent.',cooldown:60 };
+  if (type === 'EMAIL_OTP') {
+    if (user && !pending(user)) throw new ConflictRequestError('This account cannot be registered again. Sign in or contact support.');
+    if (!user) user = await UserRepo.createInactiveUser(email);
   }
-
-  // 2. If user doesn't exist, create them in an inactive state
-  if (!user) {
-    user = await UserRepo.createInactiveUser(email);
-  }
-
-  // 3. Check for OTP cooldown
-  const remainingCooldown = await OtpService.checkOtpCooldown(user.id, "EMAIL_OTP");
-  if (remainingCooldown > 0) {
-    throw new BadRequestError(
-      `Please wait ${remainingCooldown} seconds to resend OTP.`
-    );
-  }
-
-  // 4. Generate, save, and send new OTP
-  const { otp, otpHash } = await OtpService.generateOtp();
-  const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes
-  await UserRepo.createVerification(user.id, "EMAIL_OTP", otpHash, expiresAt);
-  await OtpService.sendOtpEmail(email, otp);
-
-  // Reset the failed attempts counter
-  await OtpService.clearOtpAttempts(user.id, "EMAIL_OTP");
-
-  return {
-    message: "Verification code sent to your email.",
-    cooldown: OtpService.OTP_COOLDOWN_MINUTES * 60,
-  };
+  const uid = user!.id;
+  const { otp,otpHash } = await OtpService.generateOtp();
+  await withTransaction(async db => {
+    const [users]=await db.query<RowDataPacket[]>('SELECT state,password_hash FROM users WHERE id=? FOR UPDATE',[uid]);
+    const current=users[0];
+    if (!current || (type==='RESET' ? current.state!==1 : !pending(current as {state:number;password_hash:string}))) throw new AuthFailureError('Account verification unavailable');
+    const [recent]=await db.query<RowDataPacket[]>('SELECT id FROM user_verifications WHERE user_id=? AND type=? AND created_at>DATE_SUB(NOW(),INTERVAL 1 MINUTE) LIMIT 1',[uid,type]);
+    if(recent.length) throw new BadRequestError('Wait one minute before requesting another code');
+    await db.query('UPDATE user_verifications SET is_verified=1 WHERE user_id=? AND type=?',[uid,type]);
+    await db.query('INSERT INTO user_verifications(user_id,type,otp_hash,expires_at) VALUES (?,?,?,DATE_ADD(NOW(),INTERVAL 5 MINUTE))',[uid,type,otpHash]);
+    await OtpService.clearOtpAttempts(uid,type);
+  });
+  if (type === 'RESET') await OtpService.sendResetPasswordOtpEmail(email,otp);
+  else await OtpService.sendOtpEmail(email,otp);
+  return { message:'Verification code sent.',cooldown:60 };
 }
+export const registerEmail = (email: string) => sendCode(normalizeEmail(email),'EMAIL_OTP');
+export const resendOtp = (email: string) => sendCode(normalizeEmail(email),'EMAIL_OTP');
+export const forgotPassword = (email: string) => sendCode(normalizeEmail(email),'RESET');
 
-/**
- * Step 2: Verify email with OTP.
- */
+async function consumeOtp<T>(email: string, otp: string, type: 'EMAIL_OTP' | 'RESET', work: (db: PoolConnection, user: RowDataPacket) => Promise<T>) {
+  const user = await UserRepo.findByEmail(normalizeEmail(email));
+  if (!user || (type === 'RESET' ? user.state !== 1 : !pending(user))) throw new BadRequestError('No eligible verification found');
+  await OtpService.checkOtpAttempts(user.id,type);
+  const verification = await UserRepo.findActiveOtpByType(user.id,type);
+  if (!verification || typeof otp !== 'string' || !/^\d{6}$/.test(otp)) throw new BadRequestError('Invalid or expired verification code');
+  if (!await bcrypt.compare(otp,verification.otp_hash!)) await OtpService.incrementOtpAttempts(user.id,type,verification);
+  const result = await withTransaction(async db => {
+    const [users] = await db.query<RowDataPacket[]>('SELECT * FROM users WHERE id=? FOR UPDATE',[user.id]);
+    if (!users[0] || (type === 'RESET' ? users[0].state !== 1 : !pending(users[0] as {state:number;password_hash:string}))) throw new AuthFailureError('Verification is no longer valid');
+    const [codes] = await db.query<RowDataPacket[]>('SELECT id FROM user_verifications WHERE id=? AND user_id=? AND type=? AND is_verified=0 AND expires_at>NOW() FOR UPDATE',[verification.id,user.id,type]);
+    if (!codes.length) throw new AuthFailureError('Verification is expired or already used');
+    await db.query('UPDATE user_verifications SET is_verified=1 WHERE user_id=? AND type=?',[user.id,type]);
+    return work(db,users[0]);
+  });
+  await OtpService.clearOtpAttempts(user.id,type);
+  return result;
+}
 export async function verifyEmail(email: string, otp: string) {
-  const user = await UserRepo.findByEmail(email);
-  if (!user || user.state !== 0) {
-    throw new BadRequestError("User not found or has already been verified.");
-  }
-
-  // 1. Check if user is already blocked (too many attempts)
-  await OtpService.checkOtpAttempts(user.id, "EMAIL_OTP"); // <- moved to otp.service.ts
-
-  // 2. Find the active OTP
-  const verification = await UserRepo.findActiveOtpByType(user.id, "EMAIL_OTP");
-  if (!verification) {
-    throw new BadRequestError("No active OTP found. Please request a new one.");
-  }
-
-  // 3. Check if OTP matches
-  const isMatch = await bcrypt.compare(otp, verification.otp_hash!);
-  if (!isMatch) {
-    // 4. If no match, increment counter (this function will throw an error)
-    await OtpService.incrementOtpAttempts(user.id, "EMAIL_OTP", verification); // <- moved to otp.service.ts
-  }
-
-  // 5. Success: Mark OTP as used and update user state
-  await OtpService.clearOtpAttempts(user.id, "EMAIL_OTP"); // clear the counter // <- moved to otp.service.ts
-  await UserRepo.markVerificationAsVerified(verification.id);
-  await UserRepo.updateState(user.id, 2); // 2 = VERIFIED_PENDING_PASSWORD
-
-  return {
-    message: "Email verified. You may now set your password.",
-  };
+  const setupToken = randomBytes(32).toString('hex');
+  return consumeOtp(email,otp,'EMAIL_OTP',async (db,user) => {
+    await db.query('UPDATE users SET state=2 WHERE id=?',[user.id]);
+    await db.query('UPDATE auth_setup_proofs SET consumed_at=NOW() WHERE user_id=? AND consumed_at IS NULL',[user.id]);
+    await db.query('INSERT INTO auth_setup_proofs (token_hash,user_id,expires_at) VALUES (?,?,DATE_ADD(NOW(),INTERVAL 10 MINUTE))',[digest(setupToken),user.id]);
+    return { message:'Email verified. Complete your account within ten minutes.',setupToken };
+  });
 }
-
-/**
- * Step 3: Set password, username, and activate account.
- */
-export async function setupPassword(
-  email: string,
-  password: string,
-  username: string
-) {
-  const user = await UserRepo.findByEmail(email);
-  if (!user || user.state !== 2) {
-    // 2 = VERIFIED_PENDING_PASSWORD
-    throw new BadRequestError("User not found or email not verified.");
-  }
-
-  const userId = user.id;
-
-  // 1. Set password and activate account
-  const passwordHash = await bcrypt.hash(password, 12);
-  await UserRepo.updatePassword(userId, passwordHash);
-  await UserRepo.updateState(userId, 1); // 1 = ACTIVE
-
-  // 2. Create profile
-  await ProfileRepo.createProfile(userId, username);
-
-  // 3. Assign role
-  await UserRepo.addRole(userId, "READER");
-
-  // 4. Create user key pair
-  const publicKey = crypto.randomBytes(64).toString("hex");
-  const privateKey = crypto.randomBytes(64).toString("hex");
-  await KeysRepo.upsert(userId, publicKey, privateKey);
-
-  return {
-    message: "Account setup complete. You can now log in.",
-    user: {
-      id: userId,
-      email: user.email,
-      username: username,
-    },
-  };
+export async function setupPassword(email: string, password: string, username: string, setupToken?: string) {
+  email = normalizeEmail(email); validatePassword(password);
+  if (typeof username !== 'string' || !/^[\p{L}\p{N}_-]{3,50}$/u.test(username)) throw new BadRequestError('Username must contain 3 to 50 letters, numbers, hyphens or underscores');
+  if (typeof setupToken !== 'string' || !/^[a-f0-9]{64}$/.test(setupToken)) throw new AuthFailureError('Verify your email before setting a password');
+  const hash = await bcrypt.hash(password,12);
+  return withTransaction(async db => {
+    const [users] = await db.query<RowDataPacket[]>('SELECT * FROM users WHERE email=? FOR UPDATE',[email]);
+    const user = users[0];
+    if (!user || user.state !== 2 || !pending(user as {state:number;password_hash:string})) throw new AuthFailureError('Account setup is unavailable');
+    const [proofs] = await db.query<RowDataPacket[]>('SELECT token_hash FROM auth_setup_proofs WHERE token_hash=? AND user_id=? AND consumed_at IS NULL AND expires_at>NOW() FOR UPDATE',[digest(setupToken),user.id]);
+    if (!proofs.length) throw new AuthFailureError('Setup authorization expired or already used. Verify your email again.');
+    await db.query('UPDATE auth_setup_proofs SET consumed_at=NOW() WHERE token_hash=?',[digest(setupToken)]);
+    await db.query('UPDATE users SET password_hash=?,state=1 WHERE id=?',[hash,user.id]);
+    await db.query('INSERT INTO user_profiles (user_id,username,is_private) VALUES (?,?,0)',[user.id,username]);
+    await db.query("INSERT IGNORE INTO user_roles (user_id,role_id) SELECT ?,id FROM roles WHERE code='READER'",[user.id]);
+    return { message:'Account setup complete.',user:{id:user.id,email:user.email,username} };
+  }).catch((error: {code?:string}) => {
+    if (error.code === 'ER_DUP_ENTRY') throw new ConflictRequestError('This username is already in use. Choose another username.');
+    throw error;
+  });
 }
-
-/**
- * Resend OTP
- */
-export async function resendOtp(email: string) {
-  const user = await UserRepo.findByEmail(email);
-  if (!user || user.state === 1) {
-    throw new BadRequestError("Invalid user or account is already active.");
-  }
-
-  const redisClient = getRedis();
-  if (!redisClient) throw new RedisErrorResponse("Redis not ready");
-
-  // 1. Check for cooldown
-  const remainingCooldown = await OtpService.checkOtpCooldown(user.id, "EMAIL_OTP");
-  if (remainingCooldown > 0) {
-    throw new BadRequestError(
-      `Please wait ${remainingCooldown} seconds to resend OTP.`
-    );
-  }
-
-  // 2. Invalidate old OTPs
-  await OtpService.clearOtpAttempts(user.id, "EMAIL_OTP"); // <- moved to otp.service.ts
-
-  // 3. Generate, save, and send new OTP
-  const { otp, otpHash } = await OtpService.generateOtp();
-  const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes
-  await UserRepo.createVerification(user.id, "EMAIL_OTP", otpHash, expiresAt);
-  await OtpService.sendOtpEmail(email, otp);
-
-  // Reset the failed attempts counter
-  await OtpService.clearOtpAttempts(user.id, "EMAIL_OTP"); // <- moved to otp.service.ts
-
-  return {
-    message: "Verification code resent to your email.",
-    cooldown: OtpService.OTP_COOLDOWN_MINUTES * 60,
-  };
-}
-
-/**
- * Forgot Password: Request a reset OTP.
- */
-export async function forgotPassword(email: string) {
-  // 1. Find user, but ONLY if they are active
-  const user = await UserRepo.findByEmail(email);
-  if (!user || user.state !== 1) { // 1 = ACTIVE
-    throw new BadRequestError("No active account found for this email.");
-  }
-
-  // 2. Check for OTP cooldown (using 'RESET' type)
-  const remainingCooldown = await OtpService.checkOtpCooldown(user.id, "RESET"); // Note: Cooldown is shared for now.
-  if (remainingCooldown > 0) {
-    throw new BadRequestError(`Please wait ${remainingCooldown} seconds to request a new code.`);
-  }
-
-  // 3. Invalidate old 'RESET' OTPs
-  await UserRepo.invalidateActiveOtps(user.id, "RESET");
-
-  // 4. Generate, save, and send new 'RESET' OTP
-  const { otp, otpHash } = await OtpService.generateOtp();
-  const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes
-  await UserRepo.createVerification(user.id, "RESET", otpHash, expiresAt);
-  
-  // Use the new email function
-  await OtpService.sendResetPasswordOtpEmail(email, otp);
-
-  // 5. Reset the attempt counter for 'RESET'
-  await OtpService.clearOtpAttempts(user.id, "RESET");
-
-  return {
-    message: "Password reset code sent to your email.",
-    cooldown: OtpService.OTP_COOLDOWN_MINUTES * 60,
-  };
-}
-
-/**
- * Verify OTP and set new password.
- */
 export async function resetPassword(email: string, otp: string, newPassword: string) {
-  // 1. Find active user
-  const user = await UserRepo.findByEmail(email);
-  if (!user || user.state !== 1) {
-    throw new BadRequestError("No active account found for this email.");
-  }
-
-  // 2. Check brute-force attempts
-  await OtpService.checkOtpAttempts(user.id, "RESET");
-
-  // 3. Find the active 'RESET' OTP
-  const verification = await UserRepo.findActiveOtpByType(user.id, "RESET");
-  if (!verification) {
-    throw new BadRequestError("No active password reset request found. Please try again.");
-  }
-
-  // 4. Check if OTP matches
-  const isMatch = await bcrypt.compare(otp, verification.otp_hash!);
-  if (!isMatch) {
-    // 5. If no match, increment counter
-    await OtpService.incrementOtpAttempts(user.id, "RESET", verification);
-  }
-
-  // 6. Success: Clear counter, hash new password, and update user
-  await OtpService.clearOtpAttempts(user.id, "RESET");
-  await UserRepo.markVerificationAsVerified(verification.id);
-  
-  const newPasswordHash = await bcrypt.hash(newPassword, 12);
-  await UserRepo.updatePassword(user.id, newPasswordHash);
-
-  // 7. Security: Invalidate all existing tokens
-  const redisClient = getRedis();
-  if (!redisClient) throw new RedisErrorResponse("Redis not ready");
-  // This key is used by checkAuth.ts to log out all other sessions
-  const cutoffKey = `TOKEN_IAT_AVAILABLE_${user.id}`; 
-  const cutoffTimestamp = Math.floor(Date.now() / 1000);
-  await redisClient.set(cutoffKey, cutoffTimestamp.toString());
-
-  return {
-    message: "Password has been reset successfully. You can now log in.",
-  };
+  validatePassword(newPassword);
+  const hash = await bcrypt.hash(newPassword,12);
+  return consumeOtp(email,otp,'RESET',async (db,user) => {
+    await db.query('UPDATE users SET password_hash=? WHERE id=?',[hash,user.id]);
+    await db.query('UPDATE auth_sessions SET revoked_at=COALESCE(revoked_at,NOW()) WHERE user_id=?',[user.id]);
+    return { message:'Password reset. All sessions have been signed out.' };
+  });
 }
-
-/** Login:
- * - verify credentials
- * - ensure per-user key pair exists (create if missing)
- * - issue tokens
- */
-export async function login(
-  email: string,
-  password: string
-): Promise<{
-  user: Pick<User, "id" | "email">;
-  tokens: { accessToken: string; refreshToken: string };
-}> {
-  const user = await UserRepo.findByEmail(email);
-  if (!user) throw new AuthFailureError("Invalid credentials");
-  if (!(await bcrypt.compare(password, user.password_hash)))
-    throw new AuthFailureError("Invalid credentials");
-  if (user.state === 0) throw new AuthFailureError("Account blocked");
-  if (user.state === 2)
-    throw new AuthFailureError(
-      "Account not fully set up. Please set your password."
-    );
-  if (user.state !== 1) throw new AuthFailureError("Account is not active.");
-
-  const id = Number(user.id);
-
-  let keys: UserKeysRow; // <-- non-nullable
-  const existing = await KeysRepo.getByUserId(id);
-  if (existing) {
-    keys = existing;
-  } else {
-    const publicKey = crypto.randomBytes(64).toString("hex");
-    const privateKey = crypto.randomBytes(64).toString("hex");
-    await KeysRepo.upsert(id, publicKey, privateKey);
-    keys = {
-      user_id: id,
-      public_key: publicKey,
-      private_key: privateKey,
-      created_at: new Date(),
-      updated_at: new Date(),
-    };
-  }
-
-  const tokens = await createTokenPair(
-    { uid: id, email },
-    keys.public_key,
-    keys.private_key
-  );
-  return { user: { id, email: user.email }, tokens };
+export async function login(email: string, password: string) {
+  const user = await UserRepo.findByEmail(normalizeEmail(email));
+  if (typeof password !== 'string' || Buffer.byteLength(password,'utf8') > 72 || !user || user.state !== 1 || !await bcrypt.compare(password,user.password_hash)) throw new AuthFailureError('Invalid credentials');
+  return { user:{id:Number(user.id),email:user.email},tokens:await issueSession(Number(user.id),user.password_hash) };
 }
-
-/** Logout:
- * - blacklist the current access token (middleware put decoded token into req.user)
- */
-export async function logout(decodedAT: {
-  uid: number;
-  jti: string;
-  exp?: number;
-}) {
-  const now = Math.floor(Date.now() / 1000);
-  const ttl = decodedAT.exp ? Math.max(decodedAT.exp - now, 1) : 24 * 60 * 60;
-  await revokeToken(decodedAT.uid, decodedAT.jti, ttl);
-  return { ok: true };
+export async function logout(payload: SessionPayload) {
+  await revokeSession(payload.sid,payload.uid);
+  return {ok:true};
 }
-
-/** refresh (requires RT middleware) */
-export async function refreshTokens(
-  userId: number,
-  email: string,
-  currentRtJti: string,
-  rtExp?: number
-) {
-  const keys = await KeysRepo.getByUserId(userId);
-  if (!keys) throw new AuthFailureError("Key pair missing");
-
-  // rotate refresh token: invalidate the current RT to prevent reuse
-  if (currentRtJti) {
-    const now = Math.floor(Date.now() / 1000);
-    const ttl = rtExp ? Math.max(rtExp - now, 1) : 7 * 24 * 60 * 60;
-    await revokeToken(userId, currentRtJti, ttl);
-  }
-
-  // mint a fresh pair (same per-user keys)
-  return await createTokenPair(
-    { uid: userId, email },
-    keys.public_key,
-    keys.private_key
-  );
-}
+export const refreshTokens = (payload: SessionPayload) => rotateSession(payload);

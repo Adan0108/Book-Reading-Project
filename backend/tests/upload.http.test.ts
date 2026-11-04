@@ -3,13 +3,24 @@ import express from 'express';
 import request from 'supertest';
 import jwt from 'jsonwebtoken';
 const roles = vi.hoisted(() => ({ current: ['AUTHOR'] }));
-vi.mock('../src/models/repositories/userKeys.repo', () => ({ getByUserId: async () => ({ public_key:'test-key-only' }) }));
+// Keep HTTP authentication and real RSA verification, isolate session storage here.
+vi.mock('../src/services/session.service', async () => {
+  const jwt = (await import('jsonwebtoken')).default;
+  return { verifySessionToken: async (token: string, uid: number, purpose: string) => {
+    try {
+      const payload = jwt.verify(token, signing.publicKey, { algorithms:['RS256'], issuer:'hibook', audience:'hibook-web' }) as import('../src/services/session.service').SessionPayload;
+      if (payload.uid !== uid || payload.token_use !== purpose) throw new Error('Invalid token purpose');
+      return payload;
+    } catch { throw Object.assign(new Error('Invalid token'), {status:401}); }
+  } };
+});
+const signing = vi.hoisted(() => require('node:crypto').generateKeyPairSync('rsa', { modulusLength:2048, publicKeyEncoding:{type:'spki',format:'pem'},privateKeyEncoding:{type:'pkcs8',format:'pem'} }));
 vi.mock('../src/models/repositories/user.repo', () => ({ getRoles: async () => roles.current }));
 vi.mock('../src/dbs/init.redis', () => ({ getRedis: () => ({ get: async () => null }) }));
 import router from '../src/routes/upload';
 const app = express(); app.use(express.json()); app.use('/v1/api',router);
 app.use((error: any, _req: any, res: any, _next: any) => res.status(error.status ?? 500).json({ message:error.message }));
-const headers = () => ({ 'x-client-id':'1',Authorization:`Bearer ${jwt.sign({ uid:1,jti:'test' },'test-key-only')}` });
+const headers = () => ({ 'x-client-id':'1',Authorization:`Bearer ${jwt.sign({ uid:1,jti:'test',sid:'test-session',token_use:'access' },signing.privateKey,{algorithm:'RS256',issuer:'hibook',audience:'hibook-web',expiresIn:'15m'})}` });
 describe('protected upload HTTP endpoints',()=>{
   beforeEach(()=>{roles.current=['AUTHOR'];});
   it('requires authentication and rejects invalid tokens with 401',async()=>{

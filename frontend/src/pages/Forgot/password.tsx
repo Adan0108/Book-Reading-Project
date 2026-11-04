@@ -55,8 +55,8 @@ const ForgotPasswordPage = () => {
       toast.error("Passwords do not match.");
       return;
     }
-    if (newPassword.length < 8) {
-      toast.error("Password must be at least 8 characters long.");
+    if (newPassword.length < 12) {
+      toast.error("Password must be at least 12 characters long.");
       return;
     }
 

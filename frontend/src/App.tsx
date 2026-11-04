@@ -16,6 +16,9 @@ import CreateChapterPage from "./pages/CreateChapterPage"
 import EditChapterPage from './pages/EditChapterPage'
 import AuthorDashboardPage from './pages/AuthorDashboardPage'
 import AuthorGuard from './features/author/AuthorGuard'
+import AccountGuard from './features/account/AccountGuard'
+import AuthorApplicationPage from './pages/AuthorApplicationPage'
+import AdminApplicationsPage from './pages/AdminApplicationsPage'
 
 
 const App = () => {
@@ -30,6 +33,8 @@ const App = () => {
         <Route path="/comic/:slug" element={<BookDetailPage />} />
         <Route path="/comic/:slug/chapters/:chapterNo" element={<ChapterReadingPage />} />
         <Route path="/author/:authorId" element={<AuthorProfilePage />} />
+        <Route element={<AccountGuard />}><Route path="/account/author-application" element={<AuthorApplicationPage/>}/></Route>
+        <Route element={<AccountGuard role="ADMIN"/>}><Route path="/admin/applications" element={<AdminApplicationsPage/>}/></Route>
         <Route element={<AuthorGuard />}>
         <Route path="/author/comic/create" element={<CreateBookPage />} />
         <Route path="/author/comic/:bookId/edit" element={<EditBookPage />} />
