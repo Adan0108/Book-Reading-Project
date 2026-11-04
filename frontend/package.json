@@ -10,7 +10,8 @@
     "preview": "vite preview",
     "test": "vitest run",
     "typecheck": "tsc -b",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "test:compose": "playwright test --config playwright.compose.config.ts"
   },
   "dependencies": {
     "@blocknote/core": "^0.57.0",

@@ -115,9 +115,11 @@ test("fixture checkout confirms membership and donation only through signed webh
   await readerPage
     .getByRole("button", { name: "Confirm fixture payment" })
     .click();
-  await expect(readerPage.getByRole("status")).toContainText(
-    "Payment confirmed by verified webhook.",
-  );
+  await expect(
+    readerPage
+      .getByRole("status")
+      .filter({ hasText: "Payment confirmed by verified webhook." }),
+  ).toContainText("Payment confirmed by verified webhook.");
   expect(
     (await request.get(chapterUrl, { headers: readerHeaders })).status(),
   ).toBe(200);
@@ -159,8 +161,12 @@ test("fixture checkout confirms membership and donation only through signed webh
   ).toBe(200);
   await readerPage.setViewportSize({ width: 390, height: 844 });
   await readerPage.goto("/account/payments");
-  await expect(readerPage.getByRole("heading",{name:"Payment history",exact:true})).toBeVisible();
-  await expect(readerPage.getByText("Donations after refunds: $7.25",{exact:true})).toBeVisible();
+  await expect(
+    readerPage.getByRole("heading", { name: "Payment history", exact: true }),
+  ).toBeVisible();
+  await expect(
+    readerPage.getByText("Donations after refunds: $7.25", { exact: true }),
+  ).toBeVisible();
   expect(
     await readerPage.evaluate(
       () => document.documentElement.scrollWidth <= window.innerWidth,

@@ -11,6 +11,7 @@ export function configureQaEnvironment() {
     MYSQL_PASSWORD: "publishing-qa-local",
     MYSQL_DB: "publishing_qa",
     REDIS_HOST: "127.0.0.1",
+    REDIS_URL: "",
     REDIS_PORT: "6379",
     EMAIL_HOST: "127.0.0.1",
     EMAIL_PORT: "1",

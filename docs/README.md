@@ -10,3 +10,5 @@ Detailed project Markdown documentation belongs under `docs/`. The repository ro
 | [Publishing audit and implementation report](publishing/PUBLISHING_REPORT.md) | Publishing architecture, API contracts, migration details, tests and limitations. Historical Git snapshots retain the paths used when recorded. |
 | [MVP readiness audit](mvp-audit/README.md) | Evidence-based feature matrix, security findings, user journeys, test results and roadmap for the text-first HiBook MVP. |
 | [MVP implementation](mvp/README.md) | Current acceptance checklist, phase progress and executed verification after the historical audit. |
+
+Current engineering guides: [architecture](architecture/README.md), [API](api/README.md), [database](database/README.md), [security](security/README.md), [deployment](deployment/README.md), and [testing](testing/README.md). Historical setup/audit documents above are preserved; use the current deployment guide for the complete application stack.

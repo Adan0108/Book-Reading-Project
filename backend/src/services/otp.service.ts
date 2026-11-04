@@ -3,8 +3,8 @@ import bcrypt from 'bcrypt';
 import { getRemainingCooldown, createVerification, findActiveOtpByType, invalidateActiveOtps } from '../models/repositories/user.repo';
 import type { VerificationType } from '../models/userVerification.model';
 import sendMail from '../utils/sendMail';
-import { getRedis } from '../dbs/init.redis';
-import { RedisErrorResponse, AuthFailureError } from '../core/error.response';
+import { securityRedis } from '../dbs/init.redis';
+import { AuthFailureError } from '../core/error.response';
 
 export const OTP_COOLDOWN_MINUTES = 1;
 export const MAX_OTP_ATTEMPTS = 10;
@@ -34,11 +34,9 @@ export const checkOtpCooldown = async (userId: number, type: VerificationType): 
  * Checks if a user has exceeded the max attempt limit.
  */
 export const checkOtpAttempts = async (userId: number, type: VerificationType) => {
-  const redisClient = getRedis();
-  if (!redisClient) throw new RedisErrorResponse("Redis not ready");
 
   const attemptsKey = getOtpAttemptsKey(userId, type);
-  const attempts = Number(await redisClient.get(attemptsKey)) || 0;
+  const attempts = Number(await securityRedis(client=>client.get(attemptsKey))) || 0;
 
   if (attempts >= MAX_OTP_ATTEMPTS) {
     throw new AuthFailureError("Too many failed OTP attempts. Please request a new code.");
@@ -49,24 +47,22 @@ export const checkOtpAttempts = async (userId: number, type: VerificationType) =
  * Increments the failed attempt counter for a user.
  */
 export const incrementOtpAttempts = async (userId: number, type: VerificationType, verification: any) => {
-  const redisClient = getRedis();
-  if (!redisClient) throw new RedisErrorResponse("Redis not ready");
 
   const attemptsKey = getOtpAttemptsKey(userId, type);
-  const newAttempts = await redisClient.incr(attemptsKey);
+  const newAttempts = await securityRedis(client=>client.incr(attemptsKey));
 
   if (newAttempts === 1) {
     // On the first failed attempt, set the counter to expire when the OTP expires
     const ttl = Number(verification.expires_in_seconds);
     if (ttl > 0) {
-      await redisClient.expire(attemptsKey, ttl);
+      await securityRedis(client=>client.expire(attemptsKey, ttl));
     }
   }
 
   // If this was the 10th attempt, invalidate the OTP
   if (newAttempts >= MAX_OTP_ATTEMPTS) {
     await invalidateActiveOtps(userId, type);
-    await redisClient.del(attemptsKey); // clean up
+    await securityRedis(client=>client.del(attemptsKey)); // clean up
     throw new AuthFailureError("Invalid OTP. Too many failed attempts. A new code is required.");
   }
   
@@ -78,11 +74,9 @@ export const incrementOtpAttempts = async (userId: number, type: VerificationTyp
  * Clears the attempt counter for a user (e.g., on success or new OTP).
  */
 export const clearOtpAttempts = async (userId: number, type: VerificationType) => {
-  const redisClient = getRedis();
-  if (!redisClient) throw new RedisErrorResponse("Redis not ready");
 
   const attemptsKey = getOtpAttemptsKey(userId, type);
-  await redisClient.del(attemptsKey);
+  await securityRedis(client=>client.del(attemptsKey));
 };
 
 // /**

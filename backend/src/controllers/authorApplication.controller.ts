@@ -3,11 +3,7 @@ import { OK, CREATED } from "../core/success.response";
 import * as authorAppService from "../services/application.service";
 
 function getClientIp(req: Request) {
-  return (
-    (req.headers["x-forwarded-for"] as string)?.split(",")[0]?.trim() ||
-    req.socket.remoteAddress ||
-    "unknown"
-  );
+  return req.ip ?? 'unknown';
 }
 
 export const submit = async (req: Request, res: Response) => {

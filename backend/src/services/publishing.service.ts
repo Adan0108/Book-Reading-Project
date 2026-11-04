@@ -8,7 +8,7 @@ import { pool } from '../dbs/init.mysql';
 import cloudinary from '../configs/cloudinary.config';
 import { BadRequestError, ForbiddenError, NotFoundError, ConflictRequestError, ErrorResponse } from '../core/error.response';
 import { cacheDel } from '../utils/cache';
-import { getRedis } from '../dbs/init.redis';
+import { securityRedis } from '../dbs/init.redis';
 
 export const MAX_BYTES = 10 * 1024 * 1024;
 export const MAX_PAGES = 100;
@@ -74,11 +74,9 @@ export async function confirmUpload(userId: number, id: string) {
   if (!a) throw new NotFoundError('Upload not found');
   if (a.confirmed_at) return { id: a.id, imageUrl: a.image_url };
   if (!a.is_valid) throw new BadRequestError('Upload authorization expired. Select the image again.');
-  const redis = getRedis();
-  if (!redis) throw new ErrorResponse('Upload verification is temporarily unavailable.', 503);
   const rateKey = `publishing:confirm:${a.author_id}:${Math.floor(Date.now() / 60000)}`;
-  const attempts = await redis.incr(rateKey);
-  if (attempts === 1) await redis.expire(rateKey, 120);
+  const attempts = await securityRedis(redis=>redis.incr(rateKey));
+  if (attempts === 1) await securityRedis(redis=>redis.expire(rateKey, 120));
   if (attempts > 120) throw new ErrorResponse('Image verification limit reached. Retry in a minute.', 429);
   let resource: any;
   try { resource = await cloudinary.api.resource(a.public_id, { resource_type: 'image', type: 'upload', timeout: 20000 }); }
