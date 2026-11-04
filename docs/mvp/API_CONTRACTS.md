@@ -65,4 +65,16 @@ Authenticated `GET /payments/checkout/:checkoutId` is caller-owned and returns P
 
 ADMIN-only `GET /admin/payments/reconciliation` provides ledger totals and up to 100 expired unconfirmed quotes for review. It neither issues charges/refunds nor changes entitlements. See [billing architecture](../architecture/PAYMENTS.md) and [external sandbox procedure](PAYMENT_SETUP.md).
 
-Chat/moderation contracts will be added when implemented and verified.
+## Author-member chat
+
+All chat REST routes require access Bearer authentication and `x-client-id`.
+
+- `POST /chat/conversations`: `{authorId,memberId?}`; readers may only create their own conversation; authors supply an eligible member ID. Returns the unique conversation ID.
+- `GET /chat/conversations?cursor=`: participant-only summaries, eligibility and unread counts, 50-row ID cursor.
+- `GET /chat/conversations/:id/messages?cursor=`: authorized chronological history page with `nextCursor`, `canSend` and `peerLastReadId`.
+- `POST /chat/conversations/:id/messages`: `{clientId:<UUID v4>,text}`; persists once per sender/key and rejects conflicting reuse. Limit 4,000 characters, 30 new messages/minute and 1,000/day.
+- `POST /chat/conversations/:id/read`: `{messageId}`; monotonic read position, message must belong to the conversation.
+
+Socket.IO `/socket.io/` uses auth `{userId,token}` and trusted Origin. `chat:join` takes a conversation ID and acknowledges eligibility; `chat:leave` removes selection. Server events are `chat:message`, `chat:changed` and `chat:revoked`. Writes remain on REST to reuse refresh/idempotency/error handling. No arbitrary room join or cached protected packet replay is exposed. See [privacy, expiry and recovery policy](../architecture/MEMBER_CHAT.md).
+
+Moderation contracts will be added when implemented and verified.

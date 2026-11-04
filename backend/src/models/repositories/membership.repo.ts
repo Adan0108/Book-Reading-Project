@@ -8,8 +8,9 @@ type Database = Pick<PoolConnection, "query">;
 export const getActiveMemberships = async (
   userId: number,
   authorId: number,
+  db: Database = pool,
 ) => {
-  const [rows] = await pool.query(
+  const [rows] = await db.query(
     `SELECT m.id,m.user_id,m.author_id,m.tier_id,m.status,m.current_period_end,l.level
      FROM memberships m JOIN users u ON u.id=m.user_id AND u.state=1
      JOIN membership_tiers t ON t.id=m.tier_id AND t.author_id=m.author_id
@@ -23,15 +24,18 @@ export const getActiveMemberships = async (
   return rows as RowDataPacket[];
 };
 
-export async function findAvailableAuthor(authorId: number) {
-  const [rows] = await pool.query<RowDataPacket[]>(
+export async function findAvailableAuthor(
+  authorId: number,
+  db: Database = pool,
+) {
+  const [rows] = await db.query<RowDataPacket[]>(
     "SELECT a.id,a.user_id,a.pen_name FROM authors a JOIN users u ON u.id=a.user_id WHERE a.id=? AND a.is_approved=1 AND u.state=1",
     [authorId],
   );
   return rows[0] ?? null;
 }
-export async function isActiveAdmin(userId: number) {
-  const [rows] = await pool.query<RowDataPacket[]>(
+export async function isActiveAdmin(userId: number, db: Database = pool) {
+  const [rows] = await db.query<RowDataPacket[]>(
     "SELECT 1 FROM user_roles ur JOIN roles r ON r.id=ur.role_id JOIN users u ON u.id=ur.user_id WHERE ur.user_id=? AND r.code='ADMIN' AND u.state=1 LIMIT 1",
     [userId],
   );

@@ -4,6 +4,8 @@ import {
   NotFoundError,
 } from "../core/error.response";
 import * as membershipRepo from "../models/repositories/membership.repo";
+import type { PoolConnection } from "mysql2/promise";
+import { pool } from "../dbs/init.mysql";
 
 export interface TierRule {
   tierId: number;
@@ -33,8 +35,9 @@ const unavailable: AccessDecision = { allowed: false, reason: "UNAVAILABLE" };
 export async function loadEntitlementContext(
   userId: number | undefined,
   authorId: number,
+  db: Pick<PoolConnection, "query"> = pool,
 ): Promise<EntitlementContext> {
-  const author = await membershipRepo.findAvailableAuthor(authorId);
+  const author = await membershipRepo.findAvailableAuthor(authorId, db);
   const isAuthor = Boolean(
     author && userId && Number(author.user_id) === userId,
   );
@@ -42,11 +45,11 @@ export async function loadEntitlementContext(
     author &&
       userId &&
       (Number(author.user_id) === userId ||
-        (await membershipRepo.isActiveAdmin(userId))),
+        (await membershipRepo.isActiveAdmin(userId, db))),
   );
   const memberships =
     userId && author
-      ? await membershipRepo.getActiveMemberships(userId, authorId)
+      ? await membershipRepo.getActiveMemberships(userId, authorId, db)
       : [];
   return {
     userId,

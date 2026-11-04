@@ -27,6 +27,7 @@ import AuthorPostsPage from './pages/AuthorPostsPage'
 import AuthorFeedPage from './pages/AuthorFeedPage'
 import DonationPage from './pages/DonationPage'
 import PaymentHistoryPage from './pages/PaymentHistoryPage'
+import ChatPage from './pages/ChatPage'
 
 
 const App = () => {
@@ -45,6 +46,7 @@ const App = () => {
         <Route path="/author/:authorId/posts" element={<AuthorFeedPage/>}/>
         <Route path="/author/:authorId/donate" element={<DonationPage/>}/>
         <Route element={<AccountGuard/>}><Route path="/account/payments" element={<PaymentHistoryPage/>}/></Route>
+        <Route element={<AccountGuard/>}><Route path="/account/messages" element={<ChatPage/>}/></Route>
         <Route element={<AccountGuard/>}><Route path="/account/memberships" element={<MyMembershipsPage/>}/></Route>
         <Route element={<AccountGuard />}><Route path="/account/author-application" element={<AuthorApplicationPage/>}/></Route>
         <Route element={<AccountGuard role="ADMIN"/>}><Route path="/admin/applications" element={<AdminApplicationsPage/>}/></Route>

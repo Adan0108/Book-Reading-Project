@@ -241,7 +241,7 @@ export default function AuthorMembershipsPage() {
                     <tbody>
                       {members.items.map((m) => (
                         <tr key={m.id}>
-                          <td>{m.username || `Reader ${m.userId}`}</td>
+                          <td>{m.username || `Reader ${m.userId}`}{m.hasAccess&&<Link className="link block mt-2" to={`/account/messages?author=${data.authorId}&member=${m.userId}`}>Message member</Link>}</td>
                           <td>{m.tierName}</td>
                           <td>{m.hasAccess ? "Active" : m.status}</td>
                           <td>

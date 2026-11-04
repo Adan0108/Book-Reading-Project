@@ -12,9 +12,9 @@ States: NOT STARTED, IN PROGRESS, BLOCKED, COMPLETED, VERIFIED, MERGED. A passin
 | Reader experience | MERGED | Structured and legacy rendering, typography, preferences, navigation/progress; desktop/mobile browser checks | `d326c94`, merge `30fef17`; discovery/library remain separate |
 | Optional Cloudinary images | MERGED | Signed intent/confirmation flow and existing E2E | Preserve through rich text changes; original merge `82b4bf9` |
 | Membership tiers and entitlements | MERGED | `membership.service.ts`, `entitlement.service.ts`, membership repository, policy/tier/post migration and UI | `17a6350`, merge `d55593e`; 63 backend / 12 frontend tests and seven headed journeys at merge. Actual chat remains a separate dependency. |
-| Payment adapter and sandbox evidence | VERIFIED | `payments/`, billing migrations/routes, plans, checkout/status/history UI; signed SDK fixtures and real MySQL | 78 backend / 12 frontend tests; eight headed journeys passed. Live Stripe sandbox UNVERIFIED without credentials. |
-| Donations | VERIFIED | Server-validated USD checkout, ledger/splits/refunds, reader and author history UI | Fixture end-to-end passed; no real financial transactions |
-| Member chat | NOT STARTED | None | Socket auth, persistence, expiry and reconnect journeys |
+| Payment adapter and sandbox evidence | MERGED | `payments/`, billing migrations/routes, plans, checkout/status/history UI; signed SDK fixtures and real MySQL | `8921b5a`, merge `1359447`; 78 backend / 12 frontend tests and eight headed journeys at merge. Live Stripe sandbox UNVERIFIED without credentials. |
+| Donations | MERGED | Server-validated USD checkout, ledger/splits/refunds, reader and author history UI | `8921b5a`, merge `1359447`; fixture end-to-end passed; no real financial transactions |
+| Member chat | VERIFIED | `chat/`, conversation repository, routes/migration, `features/chat/`, ChatPage | 87 backend / 12 frontend tests and all nine headed journeys passed; single-process socket delivery |
 | Admin moderation | NOT STARTED | Application review alone is not moderation | Content/account controls, pricing/settings, audit log/dashboard |
 | Search/discovery | IN PROGRESS | Search API exists | Real home catalog, stable validation/pagination and journeys |
 | Profiles and library | IN PROGRESS | Existing partial profile/detail pages | Author data, follows/bookmarks/history/posts |
