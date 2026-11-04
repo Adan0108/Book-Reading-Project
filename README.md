@@ -28,9 +28,8 @@ The core application is implemented and tested locally. Stripe accepts sandbox c
 ```mermaid
 flowchart LR
     Users[Readers · Authors · Admins] --> Web[React application]
-    Web --> Gateway[Nginx gateway]
-    Gateway --> API[Express modular monolith]
-    Web <-->|Socket.IO| API
+    Web <-->|HTTP · Socket.IO| Gateway[Nginx gateway]
+    Gateway <--> API[Express modular monolith]
     Web -->|Direct signed uploads| Images[Cloudinary]
     API -->|Confirm assets| Images
     API --> DB[(MySQL)]
@@ -92,3 +91,5 @@ Latest local checks passed: **127 backend tests, 18 frontend tests, 14 headed br
 [Architecture](docs/architecture/README.md) · [API](docs/api/README.md) · [Database](docs/database/README.md) · [Security](docs/security/README.md) · [Deployment](docs/deployment/README.md) · [Testing](docs/testing/README.md) · [Implementation checklist](docs/mvp/MASTER_CHECKLIST.md)
 
 Detailed engineering records live under [`docs/`](docs/README.md). The original audit is retained as historical evidence rather than presented as the current implementation state.
+
+Merged-main verification at `fc6f022` passed the complete suite; see the [release readiness report](docs/mvp/RELEASE_READINESS.md) for the feature matrix, security/payment evidence, Git history and remaining deployment actions.
