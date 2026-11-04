@@ -4,6 +4,7 @@ import { useBookStore } from '../store/useBookStore';
 import { useThemeStore } from '../store/useThemeStore';
 import { FiUser, FiList } from 'react-icons/fi';
 import Header from './HomePage/Header';
+import ReportContent from '../features/moderation/ReportContent';
 
 const BookDetailPage = () => {
     const { slug } = useParams<{ slug: string }>();
@@ -171,6 +172,7 @@ const BookDetailPage = () => {
                                 <p className={isDark ? 'text-gray-300' : 'text-gray-700'}>
                                     {currentBook.synopsis || "Chưa có nội dung mô tả cho truyện này."}
                                 </p>
+                                <ReportContent kind="BOOK" resourceId={currentBook.id}/>
                             </div>
                         </div>
 

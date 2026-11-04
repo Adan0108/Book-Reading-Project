@@ -8,6 +8,7 @@ import NovelContent from "../features/reader/NovelContent";
 import { useReaderPreferences } from "../features/reader/useReaderPreferences";
 import { message } from "../features/author/images";
 import "../features/reader/reader.css";
+import ReportContent from '../features/moderation/ReportContent';
 
 interface Header {
   id: number;
@@ -240,6 +241,7 @@ export default function ChapterReadingPage() {
                 <Link to={`/comic/${slug}`}>Back to book</Link>
               )}
             </nav>
+            <ReportContent kind="CHAPTER" resourceId={chapter.id}/>
           </article>
         </>
       )}

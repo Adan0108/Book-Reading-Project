@@ -3,6 +3,7 @@ import { Link, useParams } from "react-router-dom";
 import api from "../lib/axios";
 import { message } from "../features/author/images";
 import type { AuthorPost } from "../features/membership/types";
+import ReportContent from '../features/moderation/ReportContent';
 
 export default function AuthorFeedPage() {
   const { authorId } = useParams(),
@@ -80,6 +81,7 @@ export default function AuthorFeedPage() {
               ) : (
                 <p className="whitespace-pre-wrap leading-8">{post.body}</p>
               )}
+              <ReportContent kind="POST" resourceId={post.id}/>
             </article>
           ))
         )}

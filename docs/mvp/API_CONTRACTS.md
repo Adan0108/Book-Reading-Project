@@ -77,4 +77,12 @@ All chat REST routes require access Bearer authentication and `x-client-id`.
 
 Socket.IO `/socket.io/` uses auth `{userId,token}` and trusted Origin. `chat:join` takes a conversation ID and acknowledges eligibility; `chat:leave` removes selection. Server events are `chat:message`, `chat:changed` and `chat:revoked`. Writes remain on REST to reuse refresh/idempotency/error handling. No arbitrary room join or cached protected packet replay is exposed. See [privacy, expiry and recovery policy](../architecture/MEMBER_CHAT.md).
 
-Moderation contracts will be added when implemented and verified.
+## Administration and moderation
+
+ADMIN-only routes: `GET /admin/dashboard`, `GET /admin/users?query=&role=AUTHOR&cursor=`, `PATCH /admin/users/:id/state` with `{active,expectedState,reason}`, `GET /admin/content?kind=BOOK|CHAPTER|POST&query=&cursor=`, `GET /admin/content/:kind/:id`, and `PATCH /admin/content/:kind/:id` with `{hidden,version,reason}`. Moderation state is independent of publication state. Self-suspension and activating pending setup are rejected; suspension revokes sessions transactionally.
+
+Authenticated `POST /reports` accepts `{kind,resourceId,reason}` for available published content. It returns the existing open report on a repeated submission. Defaults: five new reports/account/day, maximum reason 2,000 characters.
+
+ADMIN-only `GET /admin/reports?status=&cursor=` and `PATCH /admin/reports/:id` with `{status,version,reason}` manage review. Closed reports cannot be reopened. `GET`/`PUT /admin/moderation-policy` use `{reportsEnabled,reportsPerDay,version,reason}`; the allowed daily quota is 1–20. `GET /admin/audit?cursor=` is read-only. These lists use decreasing IDs and 50-row pages; stale versions return 409. All operational changes append audit reasons in the mutation transaction.
+
+Author book/chapter and post-management responses add moderation notices. Reader routes return unavailable for hidden content before returning cached bodies. See [moderation design](../architecture/ADMIN_MODERATION.md).

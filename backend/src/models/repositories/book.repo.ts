@@ -1,4 +1,5 @@
 import { pool } from '../../dbs/init.mysql';
+import {publicBookSql,releasedChapterSql} from './publicationVisibility.sql';
 
 export type BookRow = {
   id: number;
@@ -84,7 +85,7 @@ export const findBookBySlugPublic = async (slug: string) => {
      FROM books b
      JOIN authors a ON a.id = b.author_id
      JOIN users u ON u.id=a.user_id
-     WHERE b.slug = ? AND b.deleted_at IS NULL AND b.status = 'PUBLISHED' AND a.is_approved=1 AND u.state=1
+     WHERE b.slug = ? AND ${publicBookSql('b')}
      LIMIT 1`,
     [slug],
   );
@@ -99,7 +100,7 @@ export const listBooksPublic = async (params: {
   const { query, page, limit } = params;
   const offset = (page - 1) * limit;
 
-  const where: string[] = [`b.deleted_at IS NULL`, `b.status = 'PUBLISHED'`];
+  const where: string[] = [publicBookSql('b')];
   const binds: any[] = [];
 
   if (query?.trim()) {
@@ -121,8 +122,8 @@ export const listBooksPublic = async (params: {
     `SELECT b.id, b.slug, b.title, b.synopsis, b.cover_image_url AS coverUrl,
             b.views_count AS viewsCount,
             a.pen_name AS authorName,
-            (SELECT COUNT(*) FROM chapters c WHERE c.book_id = b.id AND c.deleted_at IS NULL AND c.is_draft = 0) AS totalChapters,
-            (SELECT COUNT(*) FROM chapters c WHERE c.book_id = b.id AND c.deleted_at IS NULL AND c.is_draft = 0 AND c.visibility <> 'PUBLIC') AS membersOnlyChapters
+            (SELECT COUNT(*) FROM chapters c WHERE c.book_id = b.id AND ${releasedChapterSql('c')}) AS totalChapters,
+            (SELECT COUNT(*) FROM chapters c WHERE c.book_id = b.id AND ${releasedChapterSql('c')} AND c.visibility <> 'PUBLIC') AS membersOnlyChapters
      FROM books b
      JOIN authors a ON a.id = b.author_id
      WHERE ${where.join(' AND ')}
@@ -178,8 +179,7 @@ export const listBooksByAuthorPublic = async (params: {
   const offset = (page - 1) * limit;
 
   const where: string[] = [
-    `b.deleted_at IS NULL`,
-    `b.status = 'PUBLISHED'`,
+    publicBookSql('b'),
     `b.author_id = ?`,
   ];
   const binds: any[] = [authorId];
@@ -201,16 +201,12 @@ export const listBooksByAuthorPublic = async (params: {
             (SELECT COUNT(*)
              FROM chapters c
              WHERE c.book_id = b.id
-               AND c.deleted_at IS NULL
-               AND c.is_draft = 0
-               AND c.published_at IS NOT NULL
+               AND ${releasedChapterSql('c')}
             ) AS totalChapters,
             (SELECT COUNT(*)
              FROM chapters c
              WHERE c.book_id = b.id
-               AND c.deleted_at IS NULL
-               AND c.is_draft = 0
-               AND c.published_at IS NOT NULL
+               AND ${releasedChapterSql('c')}
                AND c.visibility <> 'PUBLIC'
             ) AS membersOnlyChapters
      FROM books b
