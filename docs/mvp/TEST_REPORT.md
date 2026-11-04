@@ -66,3 +66,21 @@ New real-MySQL checks cover concurrent tier creation, fixed prices and versioned
 The new browser journey configures two author tiers and a tier-restricted post/chapter, verifies guest and lower-tier denials, exercises manual QA renewal cancellation, upgrades the isolated fixture to check authorized reads, restores optional authentication on full reload, injects session/profile 503 responses and verifies recovery, checks mobile width, and saves admin pricing policy. Manual fixture grants are not provider checkout evidence. Payment checkout and conversations are not yet implemented.
 
 The optional-auth bug was reproduced because public feeds return 200 guest teasers, so response-triggered refresh alone never restored the saved session. Restoration now precedes those requests. Temporary service errors retain the saved identifier for retry; actual authentication failures clear it.
+
+## Sandbox billing milestone (`feat/payment-donations`)
+
+5 November 2026. Live Stripe sandbox: **UNVERIFIED**, credentials absent. No real financial transactions were performed.
+
+| Command | Observed result |
+|---|---|
+| `backend`: `$env:PUBLISHING_TEST_DATABASE='publishing_qa'; npm.cmd test` | 78 tests passed in nine files, including 11 real-MySQL payment tests and four Stripe adapter contract tests |
+| `backend`: `npm.cmd run typecheck`, `npm.cmd run build` | Passed |
+| `frontend`: `npm.cmd run typecheck`, `npm.cmd run lint`, `npm.cmd test`, `npm.cmd run build` | Passed; 12 component/service tests |
+| `frontend`: `npm.cmd run test:e2e -- payment.spec.ts` | Headed fixture checkout/donation journey passed against the real API, raw signed webhook route and MySQL |
+| `frontend`: `npm.cmd run test:e2e` | Final eight headed journeys passed in 1.6 minutes after the paid-period gap fix; six real Cloudinary test uploads retained, no deletion |
+
+Payment regression covers missing configuration, server pricing/amount/currency validation, stable and conflicting checkout keys, expired and duplicate open checkouts, provider-timeout recovery, forged/mutated/stale/live signature rejection, HTTP RBAC, atomic rollback after provider lookup failure, duplicate event/payment IDs, absolute renewal periods, late events after cancellation, partial/full/repeated refunds, append-only adjustments, paid-period gaps, caller-owned cancellation, donation splits and both histories. The Stripe SDK HTTP transport is intercepted in adapter contract tests; no external Stripe requests are made.
+
+The browser test explicitly labels payment simulation, checks chapter denial before fixture confirmation, delivers an SDK-signed event through the real webhook endpoint, verifies chapter access afterwards, records a donation, checks histories and cancels renewal without shortening paid access. Fixture routes exist only in the QA harness and are not in production `dist`.
+
+The first harness run exposed a CommonJS import mismatch in the test provider; it was corrected. A test initially supplied unsupported book field names and omitted genre; it now uses the actual contract. Screenshot review also caught a capture made while the account guard was still loading; the mobile check now waits for the real payment-history content. These failed/incomplete checks are not external provider evidence.

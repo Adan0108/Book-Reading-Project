@@ -1,4 +1,8 @@
-import type { PoolConnection, RowDataPacket, ResultSetHeader } from "mysql2/promise";
+import type {
+  PoolConnection,
+  RowDataPacket,
+  ResultSetHeader,
+} from "mysql2/promise";
 import { pool } from "../dbs/init.mysql";
 import { withTransaction } from "../dbs/transaction";
 import {
@@ -15,6 +19,7 @@ import {
   booleanValue,
 } from "../domain/validation";
 import * as repository from "../models/repositories/membership.repo";
+import { activeMembershipSql } from "../models/repositories/membershipAccess.sql";
 
 type Database = Pick<PoolConnection, "query">;
 export interface MembershipPolicy {
@@ -299,24 +304,22 @@ export async function myMembers(userId: number, cursorValue?: unknown) {
         : positiveId(cursorValue, "cursor");
   const [items] = await pool.query<RowDataPacket[]>(
     `SELECT m.id,m.user_id AS userId,p.username,t.name AS tierName,m.status,m.auto_renew AS autoRenew,UNIX_TIMESTAMP(m.current_period_end) AS endEpoch,
-    (m.status='ACTIVE' AND m.started_at<=NOW() AND m.current_period_end>NOW() AND u.state=1) AS hasAccess
+    (${activeMembershipSql} AND u.state=1) AS hasAccess
     FROM memberships m JOIN users u ON u.id=m.user_id LEFT JOIN user_profiles p ON p.user_id=u.id JOIN membership_tiers t ON t.id=m.tier_id
     WHERE m.author_id=? AND m.id<? ORDER BY m.id DESC LIMIT 51`,
     [author.id, cursor],
   );
   const [counts] = await pool.query<RowDataPacket[]>(
-    "SELECT COUNT(*) AS total,SUM(status='ACTIVE' AND started_at<=NOW() AND current_period_end>NOW()) AS active FROM memberships WHERE author_id=?",
+    `SELECT COUNT(*) AS total,SUM(${activeMembershipSql} AND u.state=1) AS active FROM memberships m JOIN users u ON u.id=m.user_id WHERE m.author_id=?`,
     [author.id],
   );
   return {
-    items: items
-      .slice(0, 50)
-      .map((row) => ({
-        ...row,
-        currentPeriodEnd: new Date(Number(row.endEpoch) * 1000).toISOString(),
-        hasAccess: Boolean(row.hasAccess),
-        autoRenew: Boolean(row.autoRenew),
-      })),
+    items: items.slice(0, 50).map((row) => ({
+      ...row,
+      currentPeriodEnd: new Date(Number(row.endEpoch) * 1000).toISOString(),
+      hasAccess: Boolean(row.hasAccess),
+      autoRenew: Boolean(row.autoRenew),
+    })),
     nextCursor: items.length > 50 ? Number(items[49].id) : null,
     total: Number(counts[0].total),
     active: Number(counts[0].active ?? 0),
@@ -325,7 +328,7 @@ export async function myMembers(userId: number, cursorValue?: unknown) {
 export async function myMemberships(userId: number) {
   const [rows] = await pool.query<RowDataPacket[]>(
     `SELECT m.id,m.author_id AS authorId,a.pen_name AS authorName,t.name AS tierName,m.status,m.auto_renew AS autoRenew,m.provider,
-    UNIX_TIMESTAMP(m.current_period_end) AS endEpoch,(m.status='ACTIVE' AND m.started_at<=NOW() AND m.current_period_end>NOW() AND a.is_approved=1 AND au.state=1) AS hasAccess
+    UNIX_TIMESTAMP(m.current_period_end) AS endEpoch,(${activeMembershipSql} AND a.is_approved=1 AND au.state=1) AS hasAccess
     FROM memberships m JOIN authors a ON a.id=m.author_id JOIN users au ON au.id=a.user_id JOIN membership_tiers t ON t.id=m.tier_id WHERE m.user_id=? ORDER BY m.id DESC LIMIT 100`,
     [userId],
   );

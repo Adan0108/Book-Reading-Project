@@ -9,8 +9,8 @@ The platform is **not release ready**. This is a living implementation record, s
 | Audit documentation preservation | MERGED | Commit `eed0a70`, pushed to main |
 | Authentication and author provisioning | MERGED | `fix/auth-session-security`: `bac8f04`; merge `4e602cd`; both remotes verified. 38 backend / 11 frontend tests and three headed E2E passed at merge. |
 | Text-first block studio and reader | MERGED | `feat/light-novel-editor`: `d326c94`; merge `30fef17`; both remotes verified. 47 backend / 12 frontend tests and six headed browser tests passed; types/lint/builds pass. |
-| Author memberships and entitlement policy | VERIFIED | Branch `feat/author-memberships`. Tier management, pricing policy/audit, chapter/post/chat eligibility, post UI/API and manual cancellation implemented. 63 backend / 12 frontend tests and all seven headed journeys passed, including optional-auth restoration and recovery from session/profile outages. Provider cancellation/checkout belong to the next payment phase. |
-| Payments and donations | Pending | Stripe adapter, sandbox checkout, verified/idempotent webhooks, ledger and reconciliation |
+| Author memberships and entitlement policy | MERGED | `feat/author-memberships`: `17a6350`; merge `d55593e`; both remotes verified. 63 backend / 12 frontend tests and seven headed journeys passed, including optional-auth restoration and outage recovery. Actual conversations are a later dependency. |
+| Payments and donations | VERIFIED | `feat/payment-donations`: Stripe sandbox adapter, raw verified/idempotent webhooks, invoice-backed grants, refund adjustments, histories, renewal cancellation and read-only reconciliation. 78 backend / 12 frontend tests and eight headed journeys passed; types/lint/builds pass. Live Stripe sandbox UNVERIFIED: missing credentials. |
 | Member chat | Pending | Authenticated sockets, persisted history/read state, entitlement expiry |
 | Admin moderation | Pending | Content/user actions, platform settings, audit log, operational dashboard |
 | Reader discovery and library | Pending | Real catalog, profiles/posts, follow/bookmark/history flows |

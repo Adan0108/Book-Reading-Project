@@ -51,4 +51,18 @@ Publishing accepts optional `requiredTierIds` on books/chapters. TIERS requires 
 
 Post writes accept `{title,body,visibility,isDraft,minimumTierId?}`. Optional-auth `GET /authors/:authorId/posts?cursor=` returns published teasers with `isLocked`; protected bodies are omitted. `GET /authors/:authorId/posts/:postId` returns a body only after authorization. All `/v1/api` HTTP responses use `Cache-Control: no-store`; internal caches remain behind fresh access checks.
 
-Payment/chat/moderation contracts will be added when implemented and verified.
+## Sandbox payments and donations
+
+`GET /payments/configuration` exposes only provider name, configured boolean, sandbox/fixture mode and currency. Keys and signing secrets stay on the server. Missing configuration produces 503 for checkout/webhook/cancellation, with unavailable UI controls.
+
+Authenticated `POST /payments/checkout` accepts `{requestId,kind:"MEMBERSHIP",authorId,tierId}` or `{requestId,kind:"DONATION",authorId,amountCents}` and returns `{id,url,mode}`. Prices, currency and share are server validated/snapshotted. Stable request IDs are required; conflicting/expired reuse and duplicate open author subscriptions return 409. New intents are limited to ten/minute and 100/day per user.
+
+`POST /payments/stripe/webhook` consumes raw JSON and `Stripe-Signature` before JSON middleware. The signature must be fresh and sandbox-mode. Payment processing commits the event/payment/grant together. A browser redirect never grants access.
+
+Authenticated `GET /payments/checkout/:checkoutId` is caller-owned and returns PENDING, PAID, PARTIALLY_REFUNDED, REFUNDED or EXPIRED. `GET /payments/me?cursor=` returns caller history/totals; `GET /authors/me/payments?cursor=` returns owned author income. Both paginate 50 records by decreasing ID.
+
+`POST /payments/memberships/:membershipId/cancel` validates ownership and confirms provider cancel-at-period-end before updating renewal state; paid access remains subject to its invoice periods. The existing manual cancellation route remains available for manual memberships.
+
+ADMIN-only `GET /admin/payments/reconciliation` provides ledger totals and up to 100 expired unconfirmed quotes for review. It neither issues charges/refunds nor changes entitlements. See [billing architecture](../architecture/PAYMENTS.md) and [external sandbox procedure](PAYMENT_SETUP.md).
+
+Chat/moderation contracts will be added when implemented and verified.
