@@ -1,0 +1,4 @@
+.env.compose
+.env.compose.*
+!.env.compose.example
+compose-results/

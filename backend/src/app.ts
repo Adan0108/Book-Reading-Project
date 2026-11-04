@@ -6,46 +6,25 @@ import compression from "compression";
 import cookieParser from "cookie-parser";
 import cors from "cors";
 import routes from "./routes";
-import { runMigrationsOnce } from "./dbs/migrate";
-import { pingMySQL } from "./dbs/init.mysql";
-import { initRedis } from "./dbs/init.redis";
-import { runUserCleanup } from "./services/cleanup.service";
+import {readiness} from "./operations/readiness";
+
+
+
+
 import swaggerUi from "swagger-ui-express";
-import YAML from "yamljs";
-import path from "path";
+import {createOpenApiDocument} from './operations/openapi';
 import { createPaymentService } from "./payments/payment.service";
 import { configuredPaymentProvider } from "./payments/stripe.provider";
 import type { PaymentProvider } from "./payments/provider";
 import { createPaymentRouter, createWebhookRouter } from "./routes/payments";
 
-const ONE_DAY_IN_MS = 24 * 60 * 60 * 1000;
-
-(async function initDatastores() {
-  try {
-    await pingMySQL(); // log: [MySQL] ping OK
-    await runMigrationsOnce();
-
-    // Schedule the cleanup task after the database is ready
-    console.log("[Scheduler] Starting user cleanup task...");
-    // Run the cleanup task immediately on startup...
-    runUserCleanup();
-    // ...and then run it again every 24 hours.
-    setInterval(runUserCleanup, ONE_DAY_IN_MS);
-  } catch (e) {
-    console.error("[MySQL] init failed:", (e as Error).message);
-  }
-
-  try {
-    await initRedis(); // log: [Redis] connection established / events
-  } catch (e) {
-    console.error("[Redis] init failed:", (e as Error).message);
-  }
-})();
-
 // Provider injection is a local composition seam for deterministic integration tests.
 // There is no HTTP endpoint or environment switch that can select a fixture provider.
 export function createHttpApp(paymentProvider?: PaymentProvider) {
   const app = express();
+  app.set("trust proxy", process.env.TRUST_PROXY_CIDRS ? process.env.TRUST_PROXY_CIDRS.split(",").map(value=>value.trim()) : false);
+  app.get("/health/live",(_req,res)=>res.json({status:"alive"}));
+  app.get("/health/ready",async(_req,res)=>{const state=await readiness();res.status(state.ready?200:503).json(state)});
   const billing = createPaymentService(paymentProvider);
   app.use(morgan("dev"));
   app.use(helmet());
@@ -61,9 +40,8 @@ export function createHttpApp(paymentProvider?: PaymentProvider) {
     }),
   );
 
-  const swaggerDocument = YAML.load(
-    path.join(__dirname, "./docs/swagger.yaml"),
-  );
+  const swaggerDocument = createOpenApiDocument();
+  app.get('/api-docs/openapi.json',(_req,res)=>res.json(swaggerDocument));
   app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 
   app.use(cookieParser());
@@ -87,10 +65,10 @@ export function createHttpApp(paymentProvider?: PaymentProvider) {
 
   // error handler
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
-    const status = err.status || 500;
+    const status = Number.isInteger(err.status) && err.status>=400 && err.status<=599 ? err.status : 500;
     const response: any = {
       status: "error",
-      message: err.message || "Internal Server Error",
+      message: status >= 500 && status !== 503 ? "The request could not be completed. Please try again." : err.message || "Internal Server Error",
     };
 
     // show stack only in development

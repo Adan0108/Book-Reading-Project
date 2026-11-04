@@ -18,9 +18,9 @@ States: NOT STARTED, IN PROGRESS, BLOCKED, COMPLETED, VERIFIED, MERGED. A passin
 | Admin moderation | MERGED | `moderation.service.ts`, target/public-visibility repositories, migration/routes, shared admin UI, reports and author notices | `8392429`, merge `abaac79`; 97 backend / 12 frontend tests and all ten headed journeys passed; delayed-preview regression passed |
 | Search/discovery | MERGED | Actual catalog, genre/tag filters, stable bounded pagination, real author profiles | Headed discovery and privacy regression passes |
 | Profiles and library | MERGED | Scoped account/public author profiles, follows/bookmarks/history and actual author analytics | Posts still need spoilers and optional artwork |
-| Redis | IN PROGRESS | Cache, OTP, JTI and auth rates | Failure handling, cache availability checks and operational review |
-| OpenAPI | IN PROGRESS | Existing incomplete Swagger | Update implemented contracts; later modules as delivered |
-| Docker deployment | NOT STARTED | Existing infrastructure-only compose | App images, readiness and isolated startup verification |
+| Redis | VERIFIED | Bounded fail-closed security commands, SQL cache fallback, noeviction Compose, real isolated outage/recovery | Fresh Compose and regression evidence in test report |
+| OpenAPI | VERIFIED | Complete module coverage, reusable schemas/security/errors, JSON and Swagger UI, parser checks | Actual Swagger rendered in built-stack journey |
+| Docker deployment | VERIFIED | Backend/frontend/MySQL/Redis/mailbox, persistent private volumes, dependency health and migration gate | Local deployment only; production handoff remains |
 | UI/accessibility/responsive | IN PROGRESS | Application forms/guards and publishing alternatives | Cross-screen system, viewport and keyboard evidence |
 | Regression/release | IN PROGRESS | [Executed tests](TEST_REPORT.md) | Full cross-module suite and final release assessment |
 
@@ -28,4 +28,4 @@ Known business gaps and non-auth audit risks remain open. No percentage or produ
 
 | Additional category | Status | Evidence | Remaining |
 |---|---|---|---|
-| Post spoilers and optional artwork | VERIFIED | `post.service.ts`, shared asset repository, post migration/editor/feed; seven real-MySQL regressions and headed lost-response/spoiler/artwork journey | Public Cloudinary delivery limitation documented; operations and final release checks remain |
+| Post spoilers and optional artwork | MERGED | `post.service.ts`, shared asset repository, post migration/editor/feed; seven real-MySQL regressions and headed lost-response/spoiler/artwork journey | Public Cloudinary delivery limitation documented; operations and final release checks remain |

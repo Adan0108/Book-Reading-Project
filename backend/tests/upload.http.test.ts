@@ -16,7 +16,7 @@ vi.mock('../src/services/session.service', async () => {
 });
 const signing = vi.hoisted(() => require('node:crypto').generateKeyPairSync('rsa', { modulusLength:2048, publicKeyEncoding:{type:'spki',format:'pem'},privateKeyEncoding:{type:'pkcs8',format:'pem'} }));
 vi.mock('../src/models/repositories/user.repo', () => ({ getRoles: async () => roles.current }));
-vi.mock('../src/dbs/init.redis', () => ({ getRedis: () => ({ get: async () => null }) }));
+vi.mock('../src/dbs/init.redis', () => ({ securityRedis: async (command: (client: unknown)=>Promise<unknown>) => command({get:async()=>null}) }));
 import router from '../src/routes/upload';
 const app = express(); app.use(express.json()); app.use('/v1/api',router);
 app.use((error: any, _req: any, res: any, _next: any) => res.status(error.status ?? 500).json({ message:error.message }));

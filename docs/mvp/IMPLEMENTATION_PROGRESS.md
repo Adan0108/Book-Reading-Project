@@ -14,12 +14,12 @@ The platform is **not release ready**. This is a living implementation record, s
 | Member chat | MERGED | `feat/member-chat`: `a36e970`; merge `2e64620`; both remotes verified. 87 backend / 12 frontend tests and nine headed journeys at merge. Single-backend-instance delivery; no offline durable composer. |
 | Admin moderation | MERGED | `feat/admin-moderation`: independent visibility flags, reports, account suspension/session revocation, versioned settings/reviews, audit, actual statistics and admin UI. 97 backend / 12 frontend tests and all ten headed journeys passed; delayed-preview focused regression also passed. Types/lint/builds pass. |
 | Reader discovery and library | MERGED | Real catalog, profiles, follows/bookmarks and synchronized reading history; 109 backend / 15 frontend tests and twelve headed journeys pass. Core `bef86b4`, merge `4d9472c`, both remotes verified. Post spoilers/artwork remain a separate milestone. |
-| Operations and API documentation | Pending | Readiness, Redis failure handling, OpenAPI, reproducible application containers |
+| Operations and API documentation | VERIFIED | Awaited startup, migration locks/checksums, Redis failure boundaries, OpenAPI, non-root application images and fresh Compose verification; 125 backend tests, thirteen headed journeys plus one built-stack journey pass. |
 | UI and release verification | Pending | Integrated journeys, accessibility, responsive browser evidence and final root README |
 
 ## Safety and environment
 
-Use only the isolated `publishing_qa` MySQL fixture on localhost:3307 for integration writes. Do not migrate the normal configured database, flush shared Redis, send real email, create real financial transactions, or delete Cloudinary assets. Existing publishing cloud E2E tests create retained cloud assets and must be run intentionally. Never commit local `.env`, credentials, generated browser artifacts or database files.
+Use only the isolated `publishing_qa` MySQL fixture on localhost:3307 or the separate `hibook-mvp-verification-20261105` Compose project for verification writes. Do not migrate the normal configured database, flush shared Redis, send real email, create real financial transactions, or delete Cloudinary assets. Existing publishing cloud E2E tests create retained cloud assets and must be run intentionally. Never commit local `.env`, credentials, generated browser artifacts or database files.
 
 ## Current architectural changes
 
@@ -32,4 +32,4 @@ Detailed validation and phase completion records will be added as they are execu
 
 ## Author post completion
 
-`feat/author-posts-media` is VERIFIED: optional ordered artwork and spoiler controls reuse signed uploads and centralized entitlements; post save keys resolve ambiguous responses without duplicate posts. Backend 116 tests, frontend 15 tests, types/lint/builds and all thirteen headed journeys passed. This completes the remaining phase-seven product capabilities; operations and final UI/release verification are still outstanding.
+`feat/author-posts-media` is MERGED (`cbca166`, merge `9755dcd`, both remotes verified): optional ordered artwork and spoiler controls reuse signed uploads and centralized entitlements; post save keys resolve ambiguous responses without duplicate posts. Backend 116 tests, frontend 15 tests, types/lint/builds and all thirteen headed journeys passed. This completes the remaining phase-seven product capabilities; operations and final UI/release verification are still outstanding.

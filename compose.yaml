@@ -1,0 +1,98 @@
+# Local application stack. Production TLS, provider credentials and backups are operator steps.
+services:
+  mysql:
+    image: mysql:8.4
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?Set MYSQL_ROOT_PASSWORD in .env.compose}
+      MYSQL_DATABASE: hibook
+      MYSQL_USER: hibook
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?Set MYSQL_PASSWORD in .env.compose}
+    volumes: [mysql-data:/var/lib/mysql]
+    healthcheck:
+      test: [CMD-SHELL, 'MYSQL_PWD="$$MYSQL_PASSWORD" mysql -h127.0.0.1 -u"$$MYSQL_USER" "$$MYSQL_DATABASE" -e "SELECT 1" >/dev/null']
+      interval: 5s
+      timeout: 3s
+      retries: 30
+    restart: unless-stopped
+  redis:
+    image: redis:8-alpine
+    command: [redis-server, --appendonly, 'yes', --maxmemory, 128mb, --maxmemory-policy, noeviction]
+    volumes: [redis-data:/data]
+    healthcheck:
+      test: [CMD, redis-cli, ping]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+  mailpit:
+    image: axllent/mailpit:v1.27
+    ports: ['127.0.0.1:${MAILPIT_PORT:-8025}:8025']
+    restart: unless-stopped
+  migrate:
+    build: ./backend
+    image: ${COMPOSE_PROJECT_NAME:-hibook}-backend:local
+    command: [node, dist/dbs/migrate.js]
+    environment: &backend-environment
+      NODE_ENV: ${NODE_ENV:-development}
+      MYSQL_HOST: mysql
+      MYSQL_PORT: 3306
+      MYSQL_DB: hibook
+      MYSQL_USER: hibook
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?Set MYSQL_PASSWORD in .env.compose}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:8080}
+      TRUST_PROXY_CIDRS: ${TRUST_PROXY_CIDRS:-uniquelocal}
+      MIGRATIONS_AUTO_APPLY: 'false'
+      EMAIL_HOST: ${EMAIL_HOST:-mailpit}
+      EMAIL_PORT: ${EMAIL_PORT:-1025}
+      EMAIL_SECURE: ${EMAIL_SECURE:-false}
+      EMAIL_FROM: ${EMAIL_FROM:-HiBook <noreply@example.invalid>}
+      EMAIL_USER: ${EMAIL_USER:-}
+      EMAIL_PASSWORD: ${EMAIL_PASSWORD:-}
+      CLOUDINARY_CLOUD_NAME: ${CLOUDINARY_CLOUD_NAME:-}
+      CLOUDINARY_API_KEY: ${CLOUDINARY_API_KEY:-}
+      CLOUDINARY_API_SECRET: ${CLOUDINARY_API_SECRET:-}
+      CLOUDINARY_PUBLISHING_PRESET: ${CLOUDINARY_PUBLISHING_PRESET:-}
+      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-}
+      STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-}
+    depends_on:
+      mysql: {condition: service_healthy}
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+  backend:
+    build: ./backend
+    image: ${COMPOSE_PROJECT_NAME:-hibook}-backend:local
+    environment: *backend-environment
+    depends_on:
+      mysql: {condition: service_healthy}
+      redis: {condition: service_healthy}
+      migrate: {condition: service_completed_successfully}
+    healthcheck:
+      test: [CMD, node, -e, "fetch('http://127.0.0.1:3000/health/ready').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 4s
+      retries: 5
+      start_period: 20s
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    restart: unless-stopped
+  frontend:
+    build: ./frontend
+    ports: ['127.0.0.1:${HTTP_PORT:-8080}:8080']
+    depends_on:
+      backend: {condition: service_healthy}
+    healthcheck:
+      test: [CMD, wget, -q, -O, /dev/null, http://127.0.0.1:8080/]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    restart: unless-stopped
+volumes:
+  mysql-data:
+  redis-data:

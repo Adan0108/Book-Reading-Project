@@ -12,10 +12,7 @@ export const getBookBySlug = async (req: Request, res: Response) => {
   const user = (req as any).user;
   const viewerId = user?.uid ?? user?.userId ?? undefined;
 
-  const ip =
-    (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() ||
-    req.socket.remoteAddress ||
-    'unknown';
+  const ip = req.ip ?? 'unknown';
 
   const data = await bookService.getBookDetailBySlug(req.params.slug, {
     viewerUserId: viewerId ? Number(viewerId) : undefined,

@@ -26,6 +26,12 @@ const transporter: Transporter = nodemailer.createTransport({
   port, 
   secure, // true -> SMTPS(465), false -> STARTTLS(587)
   auth: user ? { user, pass } : undefined,
+  connectionTimeout: 5000,
+  greetingTimeout: 5000,
+  socketTimeout: 10000,
+  requireTLS: process.env.NODE_ENV === 'production' && !secure,
+  disableFileAccess: true,
+  disableUrlAccess: true,
   tls: {
     minVersion: 'TLSv1.2',
     rejectUnauthorized: !allowSelfSigned, // <-- dev bypass
@@ -34,10 +40,6 @@ const transporter: Transporter = nodemailer.createTransport({
   // logger: true, //flooded the terminal, turn on for debug only
   // debug: true, //flooded the terminal, turn on for debug only
 });
-
-transporter.verify()
-.then(() => console.log(`[Email] Transport ready host=${host} port=${port} secure=${secure} allowSelfSigned=${allowSelfSigned}`))
-.catch(err => console.error('[Email] Transport verify failed:', err));
 
 export default async function sendMail({ email, subject, template, data }: EmailOptions): Promise<void> {
   const templatePath = path.join(__dirname, '../mail-template', template);

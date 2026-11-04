@@ -2,8 +2,8 @@ import jwt from "jsonwebtoken";
 import { verifySessionToken, type SessionPayload } from "../services/session.service";
 import asyncHandler from "../helpers/asyncHandler";
 
-import { getRedis } from "../dbs/init.redis";
-import { AuthFailureError, RedisErrorResponse } from "../core/error.response";
+import { securityRedis } from "../dbs/init.redis";
+import { AuthFailureError } from "../core/error.response";
 import { rtCookieName, atCookieName } from "../utils/cookieOptions";
 
 /** request header names */
@@ -15,11 +15,6 @@ export const HEADER = {
 
 export type AccessPayload = SessionPayload;
 
-function requireRedis() {
-  const client = getRedis();
-  if (!client) throw new RedisErrorResponse("Redis not ready");
-  return client;
-}
 
 /** key used to blacklist a token (by user + jti) */
 export function blacklistKey(uid: number, jti: string) {
@@ -27,19 +22,17 @@ export function blacklistKey(uid: number, jti: string) {
 }
 
 export async function isRevoked(uid: number, jti: string): Promise<boolean> {
-  const client = requireRedis();
   const key = blacklistKey(uid, jti);
-  const val = await client.get(key);
+  const val = await securityRedis(client=>client.get(key));
   return Boolean(val);
 }
 
 export async function revokeToken(uid: number, jti: string, expSeconds?: number) {
-  const client = requireRedis();
   const key = blacklistKey(uid, jti);
   if (expSeconds && expSeconds > 0) {
-    await client.setEx(key, expSeconds, "1");
+    await securityRedis(client=>client.setEx(key, expSeconds, "1"));
   } else {
-    await client.set(key, "1");
+    await securityRedis(client=>client.set(key, "1"));
   }
 }
 

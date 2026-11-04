@@ -3,7 +3,7 @@ const mocks = vi.hoisted(() => ({ query: vi.fn(), beginTransaction: vi.fn(), com
 vi.mock('../src/dbs/init.mysql', () => ({ pool: { query: mocks.query, getConnection: async () => mocks } }));
 vi.mock('../src/configs/cloudinary.config', () => ({ default: { config: mocks.config, api: { resource: mocks.resource }, utils: { api_sign_request: mocks.sign } } }));
 vi.mock('../src/utils/cache', () => ({ cacheDel: vi.fn() }));
-vi.mock('../src/dbs/init.redis', () => ({ getRedis: () => ({ incr: async () => 1, expire: async () => 1 }) }));
+vi.mock('../src/dbs/init.redis', () => ({ securityRedis: async (command: (client: unknown)=>Promise<unknown>) => command({incr: async()=>1,expire:async()=>1}) }));
 import { authorizeUpload, confirmUpload, savePublication, validateAssetIds, validateFile } from '../src/services/publishing.service';
 
 const id = '28dc93d6-122f-4c39-96cc-06d1c54fb223';
