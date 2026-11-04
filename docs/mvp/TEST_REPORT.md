@@ -84,3 +84,22 @@ Payment regression covers missing configuration, server pricing/amount/currency 
 The browser test explicitly labels payment simulation, checks chapter denial before fixture confirmation, delivers an SDK-signed event through the real webhook endpoint, verifies chapter access afterwards, records a donation, checks histories and cancels renewal without shortening paid access. Fixture routes exist only in the QA harness and are not in production `dist`.
 
 The first harness run exposed a CommonJS import mismatch in the test provider; it was corrected. A test initially supplied unsupported book field names and omitted genre; it now uses the actual contract. Screenshot review also caught a capture made while the account guard was still loading; the mobile check now waits for the real payment-history content. These failed/incomplete checks are not external provider evidence.
+
+## Member chat milestone (`feat/member-chat`)
+
+5 November 2026. Tests use real loopback Socket.IO connections, JWT/session checks and the isolated MySQL database.
+
+| Command | Observed result |
+|---|---|
+| `backend`: `$env:PUBLISHING_TEST_DATABASE='publishing_qa'; npm.cmd test` | Final 87 passed in ten files, including nine real MySQL/socket tests |
+| `backend`: `npm.cmd test -- chat.integration.test.ts` with QA opt-in | Nine chat integration tests passed, including twelve repeated creation races and twelve concurrent retries |
+| `backend`: `npm.cmd run typecheck`, `npm.cmd run build` | Final checks passed |
+| `frontend`: `npm.cmd run typecheck`, `npm.cmd run lint`, `npm.cmd test`, `npm.cmd run build` | Passed; 12 component/service tests |
+| `frontend`: `npm.cmd run test:e2e -- chat.spec.ts` | Headed two-user chat journey passed |
+| `frontend`: `npm.cmd run test:e2e` | Final nine headed Chromium journeys passed (1.9 minutes) after the in-transaction creation recheck and request timeout; six cloud test assets retained |
+
+The initial concurrent conversation test exposed a real foreign-key deadlock. A targeted repeated first-creation test reproduced it, then passed after both participants acquired the same author parent lock. A later unread assertion selected the newest conversation after the stress test added others; it now selects the intended conversation ID. No race failure was dismissed as flakiness.
+
+Chat checks cover participant/admin boundaries, trusted Origin, forged or wrong-identity tokens, actual websocket delivery, plain text, idempotent/conflicting sends, bounded rates, pagination, scoped monotonic reads, expired-member history/send/join/reconnect rejection, suppressed stale live delivery and revoked sessions. The browser also tests offline recovery, reload, lost committed acknowledgment with the same retry key and one database row, mobile width and expiry-driven UI denial. The actual mobile chat screenshot was visually inspected.
+
+Artifacts are ignored under `frontend/test-results/`, including `chat-member-and-author-exc-9007d-s-and-lose-access-on-expiry-chromium/chat-mobile.png` and `payment-fixture-checkout-c-64fac-es-and-cancellation-persist-chromium/payments-mobile.png`. Focused runs replace prior artifacts. No external chat, email or financial service is used.

@@ -177,7 +177,7 @@ export function createPaymentService(provider?: PaymentProvider) {
             );
           return replays[0];
         }
-        const author = await findAvailableAuthor(authorId);
+        const author = await findAvailableAuthor(authorId, db);
         if (!author || Number(author.user_id) === userId)
           throw new BadRequestError("Choose another available author");
         const [quota] = await db.query<RowDataPacket[]>(

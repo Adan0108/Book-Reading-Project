@@ -7,6 +7,7 @@ import authorApplicationsRouter from "./authorApplications";
 import adminAuthorApplicationsRouter from "./admin/authorApplications";
 import uploadRouter from "./upload";
 import membershipsRouter from './memberships';
+import chatRouter from './chat';
 
 const router = Router();
 // Authorizations are reevaluated per request; shared HTTP caches must not replay member content.
@@ -25,5 +26,6 @@ router.use("/v1/api/admin/author-applications", adminAuthorApplicationsRouter);
 
 router.use("/v1/api", uploadRouter);
 router.use('/v1/api',membershipsRouter);
+router.use('/v1/api',chatRouter);
 
 export default router;

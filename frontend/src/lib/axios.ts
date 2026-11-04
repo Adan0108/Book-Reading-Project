@@ -7,6 +7,7 @@ export const api = axios.create({
       ? "http://localhost:3000/v1/api"
       : "/v1/api",
   withCredentials: true,
+  timeout: 30000,
 });
 let refreshInFlight: Promise<void> | null = null;
 async function restoreSession() {
