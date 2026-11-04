@@ -134,7 +134,7 @@ The generated file table below lists implementation, tests and the small existin
 
 | File | Change | Reason |
 |---|---|---|
-| `PUBLISHING_REPORT.md` | Audit, API, test and operations report | Review evidence and documented limitations |
+| `docs/publishing/PUBLISHING_REPORT.md` | Audit, API, test and operations report | Review evidence and documented limitations |
 | `backend/.env.example` | Document signed publishing preset | Server-only upload configuration |
 | `backend/package-lock.json` | Lock editor/test dependencies and compatible security updates | Reproducible dependencies and reduced advisories |
 | `backend/package.json` | Add test/type scripts and required dependencies | Run automated feature and build verification |

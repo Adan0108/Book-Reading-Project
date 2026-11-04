@@ -1,0 +1,185 @@
+{
+  "auditedCommit": "82b4bf93a16242ce04d4ecd20b09d664d8af376b",
+  "environment": "isolated publishing_qa, headed Chromium, SMTP disabled, no cloud requests",
+  "results": [
+    {
+      "id": "TEXT_E2E",
+      "observed": {
+        "draftReopenedExactly": true,
+        "editedSourcePreserved": true,
+        "bytes": 27166,
+        "images": 0,
+        "cloudRequests": 0,
+        "markdownHeadingAndEmphasis": true,
+        "typography": {
+          "headingSize": "16px",
+          "headingWeight": "400",
+          "paragraphSize": "16px",
+          "paragraphMargin": "0px",
+          "lineHeight": "24px"
+        },
+        "mobileNoOverflow": true
+      }
+    },
+    {
+      "id": "LONG_TEXT_LIMIT",
+      "observed": {
+        "requestContentBytes": 112640,
+        "status": 413
+      }
+    },
+    {
+      "id": "MEMBERSHIP_BOUNDARIES",
+      "observed": {
+        "guest": 401,
+        "nonMember": 403,
+        "memberOfOtherAuthor": 403,
+        "expired": 403,
+        "cancelled": 403,
+        "activeMember": 200,
+        "lowerTier": 403,
+        "allowedTier": 200,
+        "guestAfterMemberCacheWarm": 401,
+        "tocMemberLock": true
+      }
+    },
+    {
+      "id": "PUBLIC_TO_PAID_CACHE",
+      "observed": {
+        "before": 200,
+        "guestAfterChange": 401
+      }
+    },
+    {
+      "id": "SCHEDULE_COLUMN",
+      "observed": {
+        "scheduledStored": true,
+        "published": false,
+        "draft": 1
+      }
+    },
+    {
+      "id": "BOOK_VISIBILITY",
+      "observed": {
+        "bookVisibility": "MEMBERS",
+        "chapterVisibility": "PUBLIC",
+        "guestContentStatus": 200
+      }
+    },
+    {
+      "id": "SETUP_WITHOUT_PROOF",
+      "observed": {
+        "status": 201,
+        "submittedFields": [
+          "email",
+          "password",
+          "username"
+        ],
+        "verifiedSetupTokenOrOtpSubmitted": false
+      }
+    },
+    {
+      "id": "OTP_LIMITS",
+      "observed": {
+        "recentResendStatus": 400,
+        "tenWrongAttemptStatuses": [
+          401,
+          401,
+          401,
+          401,
+          401,
+          401,
+          401,
+          401,
+          401,
+          401
+        ],
+        "correctCodeAfterLimitStatus": 400,
+        "fixtureOtpSeededNotEmailed": true
+      }
+    },
+    {
+      "id": "RESET_SESSION_REVOCATION",
+      "observed": {
+        "resetStatus": 200,
+        "oldAccessStatus": 200,
+        "oldRefreshStatus": 200
+      }
+    },
+    {
+      "id": "LOGOUT_REVOCATION",
+      "observed": {
+        "logout": 200,
+        "oldAccess": 401,
+        "oldRefresh": 401
+      }
+    },
+    {
+      "id": "JWT_ALGORITHM",
+      "observed": {
+        "algorithm": "HS256"
+      }
+    },
+    {
+      "id": "CONCURRENT_REFRESH",
+      "observed": {
+        "sameRefreshTokenStatuses": [
+          200,
+          401
+        ],
+        "sequentialOldTokenStatus": 401,
+        "repeatAttempts": [
+          [
+            200,
+            200
+          ]
+        ],
+        "doubleSuccessObserved": true,
+        "note": "Race is timing-dependent: single winner and double winner outcomes were both observed during this audit."
+      }
+    },
+    {
+      "id": "BLOCKED_EXISTING_SESSION",
+      "observed": {
+        "existingAccessStatus": 200
+      }
+    },
+    {
+      "id": "MARKDOWN_SAFETY",
+      "observed": {
+        "executableScriptsInContent": 0,
+        "inlineEventImages": 0,
+        "unsafeJavascriptLinks": 0,
+        "executionMarker": 0
+      }
+    },
+    {
+      "id": "DISCOVERY",
+      "observed": {
+        "titleSearchFoundBook": true,
+        "authorBooksStatus": 200,
+        "invalidPageStatus": 500
+      }
+    },
+    {
+      "id": "AUTHOR_APPROVAL",
+      "observed": {
+        "application": 201,
+        "approval": 200,
+        "authorProfiles": 0,
+        "publishingAccess": 403,
+        "readerAdminAccess": 403,
+        "adminListAccess": 200
+      }
+    },
+    {
+      "id": "HIDDEN_BOOK_CACHE",
+      "observed": {
+        "warmed": 200,
+        "detailAfterDirectDatabaseHide": 200,
+        "contentAfterDirectDatabaseHide": 404,
+        "note": "Direct isolated DB hide demonstrates out-of-band invalidation; no admin hide API exists."
+      }
+    }
+  ]
+}
