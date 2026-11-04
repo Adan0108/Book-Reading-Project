@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { Autoplay, Pagination, Navigation, EffectCoverflow } from 'swiper/modules';
 import { slides } from '../../fakeData/slides';
@@ -17,7 +17,7 @@ const ChevronRight = () => (
 
 const FeaturedSlider = () => {
 
-  const [swiperLoaded, setSwiperLoaded] = useState(false);
+  const [, setSwiperLoaded] = useState(false);
   const prevRef = useRef<HTMLButtonElement>(null);
   const nextRef = useRef<HTMLButtonElement>(null);
 
@@ -51,10 +51,10 @@ const FeaturedSlider = () => {
           nextEl: nextRef.current,
         }}
         onBeforeInit={(swiper) => {
-          // @ts-ignore
-          swiper.params.navigation.prevEl = prevRef.current;
-          // @ts-ignore
-          swiper.params.navigation.nextEl = nextRef.current;
+          if (typeof swiper.params.navigation === 'object') {
+            swiper.params.navigation.prevEl = prevRef.current;
+            swiper.params.navigation.nextEl = nextRef.current;
+          }
         }}
         onInit={() => setSwiperLoaded(true)}
         effect={'coverflow'}

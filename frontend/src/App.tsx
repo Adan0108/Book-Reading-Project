@@ -1,5 +1,4 @@
 import { Route, Routes } from "react-router-dom"
-import Navbar from "./components/Navbar"
 import HomePage from "./pages/HomePage/HomePage"
 import SignUp from "./pages/SignUp/SignUpPage"
 import LogIn from "./pages/LogInPage"
@@ -16,6 +15,7 @@ import EditBookPage from "./pages/EditBookPage"
 import CreateChapterPage from "./pages/CreateChapterPage"
 import EditChapterPage from './pages/EditChapterPage'
 import AuthorDashboardPage from './pages/AuthorDashboardPage'
+import AuthorGuard from './features/author/AuthorGuard'
 
 
 const App = () => {
@@ -30,11 +30,13 @@ const App = () => {
         <Route path="/comic/:slug" element={<BookDetailPage />} />
         <Route path="/comic/:slug/chapters/:chapterNo" element={<ChapterReadingPage />} />
         <Route path="/author/:authorId" element={<AuthorProfilePage />} />
+        <Route element={<AuthorGuard />}>
         <Route path="/author/comic/create" element={<CreateBookPage />} />
         <Route path="/author/comic/:bookId/edit" element={<EditBookPage />} />
         <Route path="/author/comic/:bookId/chapter/create" element={<CreateChapterPage />} />
         <Route path="/author/comic/:bookId/chapter/:chapterId/edit" element={<EditChapterPage />} />
         <Route path="/author/dashboard" element={<AuthorDashboardPage />} />
+        </Route>
 
         {/* Auth Pages */}
         <Route path="/login" element={<LogIn />} />

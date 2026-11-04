@@ -6,7 +6,7 @@ export const listChapterHeadersByBook = async (bookId: number) => {
             visibility, published_at AS releaseAt,
             CASE WHEN is_draft = 0 AND published_at IS NOT NULL THEN 1 ELSE 0 END AS isPublished
      FROM chapters
-     WHERE book_id = ? AND deleted_at IS NULL
+     WHERE book_id = ? AND deleted_at IS NULL AND is_draft = 0 AND published_at <= NOW()
      ORDER BY chapter_no ASC`,
     [bookId],
   );
@@ -15,7 +15,7 @@ export const listChapterHeadersByBook = async (bookId: number) => {
 
 export const findChapterByBookAndNoPublic = async (bookId: number, chapterNo: number) => {
   const [rows] = await pool.query(
-    `SELECT *
+    `SELECT *, published_at <= NOW() AS release_ready
      FROM chapters
      WHERE book_id = ? AND chapter_no = ? AND deleted_at IS NULL
      LIMIT 1`,

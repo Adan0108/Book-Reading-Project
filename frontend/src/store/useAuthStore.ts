@@ -2,15 +2,14 @@ import {create} from 'zustand';
 import {toast} from 'sonner';
 import { authService } from '../services/authService';
 import type { AuthState } from '../type/store';
-import { persist } from 'zustand/middleware';
 
 export const useAuthStore = create<AuthState>()((set, get) => ({
-        
+
         authUser: null,
         accessToken: null,
         isSigningUp: false,
         isLoggingIn: false,
-        isVerifying: false, 
+        isVerifying: false,
         isResending: false,
         isSettingUpPassword: false,
         isRequestingReset: false,
@@ -23,14 +22,14 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
         signUp: async (email: string) => {
             set({isSigningUp: true, emailToVerify: email});
             try {
-                            
+
                 await authService.signUp(email);
                 set({ authUser: { email } });
                 toast.success('An OTP has been sent to your email!');
                 return true;
 
             } catch (error) {
-                
+
                 console.error('Sign up error:', error);
                 toast.error('Sign up failed. Please try again.');
                 return false;
@@ -43,7 +42,7 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
         verifyOtp: async (otp: string) => {
             set({isVerifying: true});
             const email = get().emailToVerify;
-            
+
             if (!email) {
                 toast.error("An error occurred. Please sign up again.");
                 set({ isVerifying: false });
@@ -103,9 +102,9 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
             try {
                 // Call the service with all three pieces of data
                 const data = await authService.setupPassword(email, username, password);
-                
+
                 // Profile is set! Store the user, clear the email, and celebrate.
-                set({ authUser: data.user, emailToVerify: null }); 
+                set({ authUser: data.user, emailToVerify: null });
                 toast.success("Profile complete! Welcome.");
                 return true;
 
@@ -123,7 +122,7 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
 
             try {
                 const data = await authService.login(email, password);
-                console.log("Login successful:", data);
+
 
                 if (data.metadata.user.id) {
                     localStorage.setItem('userId', data.metadata.user.id.toString());
@@ -134,10 +133,10 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
                 }
 
                 // 1. Set the token FIRST so the subsequent request is authenticated
-                set({ 
-                    accessToken: data.metadata.tokens.accessToken, 
+                set({
+                    accessToken: data.metadata.tokens.accessToken,
                     emailToVerify: null,
-                    authUser: data.metadata.user 
+                    authUser: data.metadata.user
                 });
 
                 // 2. Call fetchMe to get the full profile (username, etc.)
@@ -162,6 +161,8 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
             const userId = authUser?.id || Number(localStorage.getItem('userId'));
 
             if (!authUser) {
+                localStorage.removeItem('userId');
+                localStorage.removeItem('accessToken');
                 set({ authUser: null, emailToVerify: null, accessToken: null });
                 return;
             }
@@ -170,7 +171,7 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
                 // Just clear local state if we don't have an ID
                 set({ authUser: null, emailToVerify: null, accessToken: null });
                 localStorage.removeItem('userId');
-                localStorage.removeItem('accessToken'); 
+                localStorage.removeItem('accessToken');
                 return;
             }
 
@@ -200,7 +201,7 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
             catch (error) {
                 console.error('Forgot password error:', error);
                 toast.error('Failed to send reset email. Please try again.');
-                set({ emailToVerify: null }); 
+                set({ emailToVerify: null });
                 return false;
             }
             finally {
@@ -210,7 +211,7 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
 
         resetPassword: async (otp: string, newPassword: string) => {
             set({ isResettingPassword: true });
-            const email = get().emailToVerify; 
+            const email = get().emailToVerify;
 
             if (!email) {
                 toast.error("An error occurred. Please try again.");
@@ -220,9 +221,9 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
 
             try {
                 await authService.resetPassword(email, otp, newPassword);
-                
+
                 // It worked! Clear the email and send a success toast.
-                set({ emailToVerify: null }); 
+                set({ emailToVerify: null });
                 toast.success("Password has been reset successfully!");
                 return true;
             }
@@ -260,19 +261,19 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
         },
 
         refreshToken: async () => {
-            
+
             const { isRefreshingToken } = get();
             if (isRefreshingToken) return;
 
             set({ isRefreshingToken: true });
             try{
-                
+
                 const accessToken = await authService.refreshToken();
-                console.log("Token refreshed:", accessToken);
-                
+
+
                 // ADD THIS LINE: Save the newly minted token to localStorage!
                 localStorage.setItem('accessToken', accessToken);
-                
+
                 // 2. Set the token immediately so fetchMe can use it
                 set({ accessToken });
 
@@ -283,22 +284,22 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
                 console.log("Refresh failed (User likely not logged in):", error);
                 // If refresh fails, clear everything including localStorage
                 localStorage.removeItem('userId');
-                set({ 
-                    authUser: null, 
+                set({
+                    authUser: null,
                     accessToken: null,
                 });
             }
             finally {
                 set({ isRefreshingToken: false });
             }
-            
+
         },
 
         fetchMe: async () => {
             set({ isFetchingUser: true });
             try {
                 const data = await authService.fetchMe();
-                
+
                 // --- FIX 3: Drill down into 'metadata' ---
                 // Your backend returns { message: "...", metadata: { id: 1, ... } }
                 // So we must store data.metadata, not the whole data object
@@ -306,9 +307,9 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
                     set({ authUser: data.metadata });
                 } else {
                     // Fallback in case your API structure varies
-                    set({ authUser: data }); 
+                    set({ authUser: data });
                 }
-                
+
                 console.log("Fetched user data:", data.metadata);
             } catch (error) {
                 console.error("Fetch user error:", error);
@@ -317,6 +318,6 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
                 set({ isFetchingUser: false });
             }
         }
-    
+
     }),
 );

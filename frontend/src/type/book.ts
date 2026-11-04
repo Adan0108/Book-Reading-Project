@@ -15,8 +15,10 @@ export interface Book {
     synopsis: string;
     coverUrl: string;
     authorName: string;
-    tags?: string[];
+    tags?: (string | { name: string; slug?: string; id?: number })[];
     totalChapters: number;
+    totalAllChapters?: number;
+    totalPublishedChapters?: number;
     hasMembersChapters?: boolean; 
     hasTierChapters?: boolean;
 }
@@ -28,6 +30,7 @@ export interface BookDetail extends Book {
 }
 
 export interface Chapter {
+    images?: { id: string; imageUrl: string; pageOrder: number }[];
     id: number;
     index: number;
     title: string;

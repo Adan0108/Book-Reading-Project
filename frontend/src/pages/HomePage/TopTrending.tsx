@@ -1,8 +1,8 @@
-import React, { useRef } from 'react'
+import { useRef } from 'react'
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { Navigation } from 'swiper/modules';
 import { useThemeStore } from '@/store/useThemeStore';
-import ComicCard, {type ChapterInfo } from './ComicCard';
+import ComicCard from './ComicCard';
 
 const ChevronLeft = () => (
   <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={3} stroke="currentColor" className="w-5 h-5">
@@ -24,14 +24,6 @@ const TopTrending = () => {
   
   const trendingComics = generateTrendingData().slice(0, 7);
 
-  const getRankColor = (index: number) => {
-    switch (index) {
-      case 0: return 'text-yellow-500 border-yellow-500 bg-yellow-500';
-      case 1: return 'text-green-500 border-green-500 bg-green-500';  
-      case 2: return 'text-blue-500 border-blue-500 bg-blue-500';    
-      default: return 'text-gray-400 border-gray-400 bg-gray-400';    
-    }
-  };
 
   const themeClass = isDark 
     ? "text-[#60A5FA]"   // Dark Mode Style

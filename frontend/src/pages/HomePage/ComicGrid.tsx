@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react'
+import { useRef, useState } from 'react'
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { Navigation } from 'swiper/modules';
 import ComicCard, { type ChapterInfo } from './ComicCard'
@@ -42,8 +42,8 @@ const ComicGrid = ({ title }: ComicGridProps) => {
   // 2. Refs for custom navigation buttons
   const prevRef = useRef<HTMLButtonElement>(null);
   const nextRef = useRef<HTMLButtonElement>(null);
-  const [isBeginning, setIsBeginning] = useState(true);
-  const [isEnd, setIsEnd] = useState(false);
+  const [, setIsBeginning] = useState(true);
+  const [, setIsEnd] = useState(false);
   const { isDark } = useThemeStore();
 
   return (

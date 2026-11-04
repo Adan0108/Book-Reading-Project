@@ -1,3 +1,4 @@
+import { isAxiosError } from 'axios';
 import { create } from 'zustand';
 import { toast } from 'sonner';
 import { bookService } from '../services/bookService';
@@ -10,7 +11,7 @@ interface BookState {
     currentChapter: Chapter | null;
     currentBookChapters: Chapter[]; // For TOC
     totalPages: number;
-    authorBooks: any[]
+    authorBooks: Book[]
 
     // Loading Flags
     isLoadingBooks: boolean;
@@ -32,7 +33,7 @@ interface BookState {
     fetchAuthorBooks: (authorId: number, params?: BookQueryParams) => Promise<void>;
     fetchAuthorBooksDashBoard: (params?: AuthorBooksQueryParams) => Promise<void>;
     fetchAuthorBookDetail: (bookId: number) => Promise<void>;
-    fetchAuthorChapterDetail: (bookId: number, chapterId: number) => Promise<any>;
+    fetchAuthorChapterDetail: (bookId: number, chapterId: number) => Promise<Chapter | undefined>;
 
     createNewBook: (data: CreateBookPayload) => Promise<boolean>;
     updateBookDetails: (bookId: number, data: UpdateBookPayload) => Promise<string | false>;
@@ -65,10 +66,10 @@ export const useBookStore = create<BookState>()((set, get) => ({
         try {
             const response = await bookService.getBooks(params);
 
-            const limit = response.metadata.limit || 20; 
+            const limit = response.metadata.limit || 20;
             const calculatedTotalPages = Math.ceil(response.metadata.total / limit);
 
-            set({ 
+            set({
                 books: response.metadata.items,
                 totalPages: calculatedTotalPages
             });
@@ -84,9 +85,9 @@ export const useBookStore = create<BookState>()((set, get) => ({
         set({ isLoadingBookDetail: true, currentBook: null }); // Clear previous book while loading
         try {
             const bookData = await bookService.getBookBySlug(slug);
-            
+
             console.log("Book Detail Response:", bookData);
-            
+
             set({ currentBook: bookData });
         } catch (error) {
             console.error('Fetch book detail error:', error);
@@ -108,18 +109,18 @@ export const useBookStore = create<BookState>()((set, get) => ({
     },
 
     fetchChapterContent: async (slug, chapterNo) => {
-        set({ isLoadingChapter: true, currentChapter: null }); 
+        set({ isLoadingChapter: true, currentChapter: null });
         try {
-            
+
             const chapterData = await bookService.getChapterContent(slug, chapterNo);
-            
+
             console.log("Chapter Content Response:", chapterData);
-            
+
             set({ currentChapter: chapterData });
-        } catch (error: any) {
+        } catch (error) {
             console.error('Fetch chapter content error:', error);
-            
-            if (error.response?.status === 403) {
+
+            if ((isAxiosError(error) ? error.response?.status : undefined) === 403) {
                 // toast.error('Chương này yêu cầu mở khóa hoặc đăng nhập!');
             }
         } finally {
@@ -137,7 +138,7 @@ export const useBookStore = create<BookState>()((set, get) => ({
 
             console.log("Author Books Response:", response);
 
-            set({ 
+            set({
                 books: response.metadata.items,
                 totalPages: calculatedTotalPages
             });
@@ -155,8 +156,8 @@ export const useBookStore = create<BookState>()((set, get) => ({
             const newBook = await bookService.createBook(data);
             console.log("Book created successfully:", newBook);
             return true; // Return true so the UI knows to redirect the user
-        } catch (error: any) {
-            console.error("Create book error:", error.response?.data);
+        } catch (error) {
+            console.error("Create book error:", (isAxiosError(error) ? error.response?.data : undefined));
             return false;
         } finally {
             set({ isCreatingBook: false });
@@ -171,14 +172,14 @@ export const useBookStore = create<BookState>()((set, get) => ({
 
             const currentBook = get().currentBook;
             if (currentBook && currentBook.id === bookId) {
-                set({ currentBook: { ...currentBook, ...data } as any }); 
+                set({ currentBook: { ...currentBook, ...data } });
             }
 
             const finalSlug = updatedBook.slug || data.slug || currentBook?.slug;
             return finalSlug || false;
         }
-        catch (error: any) {
-            console.error("Update book error:", error.response?.data || error);
+        catch (error) {
+            console.error("Update book error:", (isAxiosError(error) ? error.response?.data : undefined) || error);
             return false;
         }
         finally {
@@ -193,8 +194,8 @@ export const useBookStore = create<BookState>()((set, get) => ({
             const newChapter = await bookService.createChapter(bookId, data);
             console.log("Chapter created successfully:", newChapter);
             return true;
-        } catch (error: any) {
-            console.error("Create chapter error:", error.response?.data || error);
+        } catch (error) {
+            console.error("Create chapter error:", (isAxiosError(error) ? error.response?.data : undefined) || error);
             return false;
         } finally {
             set({ isCreatingChapter: false });
@@ -207,8 +208,8 @@ export const useBookStore = create<BookState>()((set, get) => ({
             await bookService.updateChapter(bookId, chapterId, data);
             console.log("Chapter updated successfully");
             return true;
-        } catch (error: any) {
-            console.error("Update chapter error:", error.response?.data || error);
+        } catch (error) {
+            console.error("Update chapter error:", (isAxiosError(error) ? error.response?.data : undefined) || error);
             return false;
         } finally {
             set({ isUpdatingChapter: false });
@@ -223,8 +224,8 @@ export const useBookStore = create<BookState>()((set, get) => ({
 
             set({ authorBooks: booksArray });
             console.log("Author books fetched successfully:", booksArray);
-        } catch (error: any) {
-            console.error("Fetch author books error:", error.response?.data || error);
+        } catch (error) {
+            console.error("Fetch author books error:", (isAxiosError(error) ? error.response?.data : undefined) || error);
             set({ authorBooks: [] });
         } finally {
             set({ isFetchingAuthorBooks: false });
@@ -236,10 +237,10 @@ export const useBookStore = create<BookState>()((set, get) => ({
         try {
             const data = await bookService.getAuthorBookDetail(bookId);
             const bookData = data.metadata ? data.metadata : data;
-            
+
             set({ currentBook: bookData });
             console.log("Fetched Author Book:", bookData);
-        } catch (error: any) {
+        } catch (error) {
             console.error("Fetch author book detail error:", error);
             set({ currentBook: null });
         } finally {

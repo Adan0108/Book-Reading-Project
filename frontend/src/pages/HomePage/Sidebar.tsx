@@ -1,5 +1,5 @@
 import { useThemeStore } from '@/store/useThemeStore';
-import React, { useState } from 'react'
+import { useState } from 'react'
 
 type TabType = 'daily' | 'weekly' | 'monthly'
 
@@ -89,7 +89,7 @@ const Sidebar = () => {
         {/* Top Comics List */}
         {/* We keep key={activeTab} on the UL to reset the list when tab changes */}
         <ul key={activeTab} className= {`divide-y ${isDark ? 'divide-gray-700' : 'divide-gray-200'}`}>
-          {topComicsData[activeTab].map((comic: any, index: number) => (
+          {topComicsData[activeTab].map((comic, index) => (
             <li 
               key={comic.id} 
               // 2. Add 'animate-stagger' class
@@ -155,7 +155,7 @@ function formatViews(views: number): string {
   return views.toString();
 }
 
-function generateTopList(count: number, idStart: number): any[] {
+function generateTopList(count: number, idStart: number) {
   const list = [];
   for (let i = 0; i < count; i++) {
     const id = idStart + i;

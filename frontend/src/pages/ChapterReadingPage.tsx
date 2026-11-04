@@ -1,4 +1,5 @@
-import React, { useEffect } from 'react';
+import Markdown from 'react-markdown';
+import { useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useBookStore } from '../store/useBookStore';
 import { useThemeStore } from '../store/useThemeStore';
@@ -95,12 +96,8 @@ const ChapterReadingPage = () => {
 
                 {/* Markdown Content Block */}
                 <div className="w-full">
-                    {/* Note: Since your API returns Markdown, we render it directly for now. 
-                        If it contains image URLs (like ![page1](https://...)), you might need a Markdown parser 
-                        like 'react-markdown' to render the images properly! */}
-                    <pre className="whitespace-pre-wrap font-sans text-lg leading-relaxed break-words">
-                        {currentChapter.contentMarkdown || 'Nội dung chương đang được cập nhật...'}
-                    </pre>
+                    {currentChapter.images?.map((image, index) => <img key={image.id} src={image.imageUrl} alt={`Page ${index + 1}`} loading={index ? 'lazy' : 'eager'} className="w-full h-auto" />)}
+                    <Markdown>{currentChapter.contentMarkdown || ''}</Markdown>
                 </div>
 
                 {/* BOTTOM NAVIGATION */}

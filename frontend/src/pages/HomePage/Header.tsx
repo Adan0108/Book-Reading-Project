@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { FiSearch, FiMenu, FiSun, FiMoon, FiLoader, FiUser, FiSettings, FiLogOut, FiBookOpen } from 'react-icons/fi';
 import { useNavigate } from 'react-router-dom';
 import type { AuthState } from '../../type/store';

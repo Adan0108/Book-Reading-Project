@@ -1,5 +1,4 @@
 import { useThemeStore } from '@/store/useThemeStore';
-import React from 'react'
 
 export interface ChapterInfo {
   id: string;
@@ -18,7 +17,7 @@ interface ComicCardProps {
   variant?: 'default' | 'trending';
 }
 
-const ComicCard = ({ title, imageUrl, rating, viewCount, chapters, isHot = false, variant = 'default' }: ComicCardProps) => {
+const ComicCard = ({ title, imageUrl, rating, viewCount, chapters, variant = 'default' }: ComicCardProps) => {
   const { isDark } = useThemeStore();
   
   // Render Stars Based on Rating

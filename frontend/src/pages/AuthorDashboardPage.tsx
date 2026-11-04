@@ -1,15 +1,16 @@
-import React, { useEffect, useState } from 'react';
+import type { Chapter } from '../type/book';
+import { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useBookStore } from '../store/useBookStore';
 import { useThemeStore } from '../store/useThemeStore';
-import { FiPlus, FiEdit, FiList, FiGlobe, FiLock, FiStar, FiBookOpen, FiChevronLeft, FiLoader, FiEdit3, FiCheckCircle, FiSettings } from 'react-icons/fi';
+import { FiPlus, FiEdit, FiList, FiGlobe, FiLock, FiStar, FiBookOpen, FiLoader, FiEdit3, FiCheckCircle, FiSettings } from 'react-icons/fi';
 import Header from './HomePage/Header';
 import { bookService } from '@/services/bookService';
 
 
 const ExpandedChapterList = ({ bookId }: { bookId: number }) =>{
     const navigate = useNavigate();
-    const [chapters, setChapters] = useState<any[]>([]);
+    const [chapters, setChapters] = useState<Chapter[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const { isDark } = useThemeStore();
 
@@ -19,7 +20,7 @@ const ExpandedChapterList = ({ bookId }: { bookId: number }) =>{
                 const data = await bookService.getAuthorBookDetail(bookId);
                 const fetchedChapters = data.metadata?.chapters || data.chapters || [];
                 
-                const sortedChapters = fetchedChapters.sort((a: any, b: any) => a.index - b.index);
+                const sortedChapters = fetchedChapters.sort((a: Chapter, b: Chapter) => a.index - b.index);
                 setChapters(sortedChapters);
             } catch (error) {
                 console.error("Failed to load chapters for dashboard", error);
@@ -175,9 +176,9 @@ const AuthorDashboardPage = () => {
                                         </div>
                                         
                                         <div className="flex flex-wrap gap-2 mb-3">
-                                            {renderStatusBadge(book.status)}
+                                            {renderStatusBadge(book.status ?? 'DRAFT')}
                                             <span className={`px-2 py-1 text-xs font-bold rounded ${isDark ? 'bg-gray-800 text-gray-400' : 'bg-gray-200 text-gray-600'} `}>
-                                                {renderVisibilityIcon(book.visibility)}
+                                                {renderVisibilityIcon(book.visibility ?? 'PUBLIC')}
                                             </span>
                                         </div>
 

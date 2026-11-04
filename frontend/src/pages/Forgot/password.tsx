@@ -7,7 +7,7 @@ import { useAuthStore } from '../../store/useAuthStore'
 import type { AuthState } from '../../type/store'
 import OTPInput from 'react-otp-input'
 
-const password = () => {
+const ForgotPasswordPage = () => {
 
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -229,4 +229,4 @@ const password = () => {
   )
 }
 
-export default password
+export default ForgotPasswordPage

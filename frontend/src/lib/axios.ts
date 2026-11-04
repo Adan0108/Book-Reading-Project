@@ -2,14 +2,15 @@ import axios from 'axios';
 import { useAuthStore } from '../store/useAuthStore';
 
 export const api = axios.create({
-    baseURL: import.meta.env.MODE === 'development' ? 'http://localhost:3000/v1/api' : 'v1/api',
+    baseURL: import.meta.env.MODE === 'development' ? 'http://localhost:3000/v1/api' : '/v1/api',
     withCredentials: true,
 })
+let refreshInFlight: Promise<void> | null = null;
 
 api.interceptors.request.use(
   (config) => {
     const state = useAuthStore.getState();
-    const accessToken = state.accessToken;
+    const accessToken = state.accessToken || localStorage.getItem('accessToken');
     const authUser = state.authUser;
 
     // 1. Add Access Token (Authentication)
@@ -54,10 +55,14 @@ api.interceptors.response.use(
 
       try {
         // 1. Tell your store to go get a fresh token
-        await useAuthStore.getState().refreshToken();
+        if (!refreshInFlight) {
+          refreshInFlight = useAuthStore.getState().refreshToken().finally(() => { refreshInFlight = null; });
+        }
+        await refreshInFlight;
 
         // 2. Grab the shiny new token that was just saved
         const newToken = useAuthStore.getState().accessToken;
+        if (!newToken) throw new Error('Please sign in again.');
 
         // 3. Swap out the old, revoked token for the new one in the headers
         originalRequest.headers.Authorization = `Bearer ${newToken}`;

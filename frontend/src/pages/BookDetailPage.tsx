@@ -1,8 +1,8 @@
-import React, { useEffect } from 'react';
+import { useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useBookStore } from '../store/useBookStore';
 import { useThemeStore } from '../store/useThemeStore';
-import { FiBookOpen, FiUser, FiList, FiClock } from 'react-icons/fi';
+import { FiUser, FiList } from 'react-icons/fi';
 import Header from './HomePage/Header';
 
 const BookDetailPage = () => {
@@ -120,7 +120,7 @@ const BookDetailPage = () => {
                             {/* TAGS */}
                             {currentBook.tags && currentBook.tags.length > 0 && (
                                 <div className="flex flex-wrap justify-center md:justify-start gap-2 mb-6">
-                                    {currentBook.tags.map((tag: any, index) => (
+                                    {currentBook.tags.map((tag, index) => (
                                         <span 
                                             key={index} 
                                             className={`px-3 py-1 rounded-md text-xs font-semibold tracking-wide uppercase

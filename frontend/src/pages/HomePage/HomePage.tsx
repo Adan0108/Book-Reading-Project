@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react'
+import { useEffect } from 'react'
 import Header from './Header';
 import Footer from './Footer';
 import FeaturedSlider from './FeaturedSlider';
@@ -40,7 +40,7 @@ const driverObj = driver({
 
 const HomePage = () => {
 
-  const checkAuth = useAuthStore((state) => state.refreshToken);
+  const checkAuth = useAuthStore((state) => state.fetchMe);
   const { isDark } = useThemeStore();
 
   // Fallback colors if images don't load
@@ -49,7 +49,7 @@ const HomePage = () => {
                           : { backgroundColor: '#dfe1e6' };
 
   useEffect(() => {
-    checkAuth();
+    if (localStorage.getItem('userId')) void checkAuth();
   }, [checkAuth]);
 
   // Wrapper function to start tour

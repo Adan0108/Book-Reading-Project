@@ -5,7 +5,7 @@ import { useAuthStore } from '../../store/useAuthStore';
 import type { AuthState } from '../../type/store';
 import { toast } from 'sonner';
 
-const email = () => {
+const ForgotEmailPage = () => {
 
     const navigate = useNavigate();
 
@@ -117,4 +117,4 @@ const email = () => {
     )
 }
 
-export default email
+export default ForgotEmailPage

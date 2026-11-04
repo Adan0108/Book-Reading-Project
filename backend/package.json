@@ -6,8 +6,10 @@
     "docker:up": "docker compose -f ./docker/docker-compose.yml up -d",
     "docker:down": "docker compose -f ./docker/docker-compose.yml down -v",
     "dev": "npm run docker:up && ts-node-dev --respawn --transpile-only src/server.ts",
-    "build": "tsc",
-    "start": "node dist/server.js"
+    "build": "tsc && node scripts/copy-assets.cjs",
+    "start": "node dist/server.js",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
   },
   "keywords": [],
   "author": "",
@@ -46,11 +48,14 @@
     "@types/multer": "^2.1.0",
     "@types/node": "^24.6.2",
     "@types/nodemailer": "^7.0.3",
+    "@types/supertest": "^7.2.1",
     "@types/swagger-jsdoc": "^6.0.4",
     "@types/swagger-ui-express": "^4.1.8",
     "@types/uuid": "^11.0.0",
     "@types/yamljs": "^0.2.34",
+    "supertest": "^7.3.1",
     "ts-node-dev": "^2.0.0",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "vitest": "^5.1.0"
   }
 }
