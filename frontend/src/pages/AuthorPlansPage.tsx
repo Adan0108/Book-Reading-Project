@@ -4,9 +4,11 @@ import api from "../lib/axios";
 import { message } from "../features/author/images";
 import { money } from "../lib/money";
 import type { AuthorTier } from "../features/membership/types";
+import { useCheckout } from "../features/membership/useCheckout";
 
 export default function AuthorPlansPage() {
   const { authorId } = useParams();
+  const billing = useCheckout();
   const [tiers, setTiers] = useState<AuthorTier[] | null>(null),
     [error, setError] = useState("");
   useEffect(() => {
@@ -30,6 +32,7 @@ export default function AuthorPlansPage() {
           <Link to={`/author/${authorId}`}>← Author profile</Link>
           <Link to={`/author/${authorId}/posts`}>Author posts</Link>
           <Link to="/account/memberships">My memberships</Link>
+          <Link to={`/author/${authorId}/donate`}>Donate</Link>
         </nav>
         <h1 className="text-3xl font-bold">Support this author</h1>
         <p>
@@ -37,6 +40,8 @@ export default function AuthorPlansPage() {
           not unlock other authors’ work. Higher tiers include lower-tier
           content.
         </p>
+        {billing.error && <p role="alert" className="alert alert-error">{billing.error}</p>}
+        <p>{billing.configuration?.mode === "fixture" ? "Payment test simulation. No real transaction." : "Sandbox checkout uses test payments only."}</p>
         {error ? (
           <p role="alert" className="alert alert-error">
             {error}
@@ -59,8 +64,9 @@ export default function AuthorPlansPage() {
                     <li key={b}>{b}</li>
                   ))}
                 </ul>
-                <button className="btn" disabled>
-                  Subscriptions unavailable
+                <button className="btn btn-primary" disabled={billing.busy || !billing.configuration?.configured}
+                  onClick={()=>billing.checkout({kind:"MEMBERSHIP",authorId:Number(authorId),tierId:t.id})}>
+                  {billing.busy ? "Opening checkout…" : billing.configuration?.configured ? `Subscribe to ${t.name}` : "Subscriptions unavailable"}
                 </button>
               </article>
             ))}

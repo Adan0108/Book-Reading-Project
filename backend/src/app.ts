@@ -3,7 +3,6 @@ import express, { Request, Response, NextFunction } from "express";
 import helmet from "helmet";
 import morgan from "morgan";
 import compression from "compression";
-import { v4 as uuidv4 } from "uuid";
 import cookieParser from "cookie-parser";
 import cors from "cors";
 import routes from "./routes";
@@ -14,13 +13,16 @@ import { runUserCleanup } from "./services/cleanup.service";
 import swaggerUi from "swagger-ui-express";
 import YAML from "yamljs";
 import path from "path";
+import { createPaymentService } from "./payments/payment.service";
+import { configuredPaymentProvider } from "./payments/stripe.provider";
+import type { PaymentProvider } from "./payments/provider";
+import { createPaymentRouter, createWebhookRouter } from "./routes/payments";
 
-const app = express();
 const ONE_DAY_IN_MS = 24 * 60 * 60 * 1000;
 
 (async function initDatastores() {
   try {
-    await pingMySQL();              // log: [MySQL] ping OK
+    await pingMySQL(); // log: [MySQL] ping OK
     await runMigrationsOnce();
 
     // Schedule the cleanup task after the database is ready
@@ -29,64 +31,81 @@ const ONE_DAY_IN_MS = 24 * 60 * 60 * 1000;
     runUserCleanup();
     // ...and then run it again every 24 hours.
     setInterval(runUserCleanup, ONE_DAY_IN_MS);
-    
   } catch (e) {
     console.error("[MySQL] init failed:", (e as Error).message);
   }
 
   try {
-    await initRedis();              // log: [Redis] connection established / events
+    await initRedis(); // log: [Redis] connection established / events
   } catch (e) {
     console.error("[Redis] init failed:", (e as Error).message);
   }
 })();
 
-// middlewares cơ bản
-app.use(morgan("dev"));
-app.use(helmet());
-app.use(compression());
-app.use(express.json({limit:'1mb'}));
-app.use(express.urlencoded({ extended: true }));
-//
-app.use(cors({
-  origin:[process.env.FRONTEND_URL || "http://localhost:8000"],
-  credentials: true,
-}));
+// Provider injection is a local composition seam for deterministic integration tests.
+// There is no HTTP endpoint or environment switch that can select a fixture provider.
+export function createHttpApp(paymentProvider?: PaymentProvider) {
+  const app = express();
+  const billing = createPaymentService(paymentProvider);
+  app.use(morgan("dev"));
+  app.use(helmet());
+  app.use(compression());
+  app.use(createWebhookRouter(billing));
+  app.use(express.json({ limit: "1mb" }));
+  app.use(express.urlencoded({ extended: true }));
+  //
+  app.use(
+    cors({
+      origin: [process.env.FRONTEND_URL || "http://localhost:8000"],
+      credentials: true,
+    }),
+  );
 
-const swaggerDocument = YAML.load(path.join(__dirname, "./docs/swagger.yaml"));
-app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument));
+  const swaggerDocument = YAML.load(
+    path.join(__dirname, "./docs/swagger.yaml"),
+  );
+  app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 
-app.use(cookieParser());
-// mount routes
-app.use("/", routes);
+  app.use(cookieParser());
+  app.use(
+    "/v1/api",
+    (_req, res, next) => {
+      res.setHeader("Cache-Control", "no-store");
+      next();
+    },
+    createPaymentRouter(billing),
+  );
+  // mount routes
+  app.use("/", routes);
 
-// 404
-app.use((_req: Request, _res: Response, next: NextFunction) => {
-  const err: any = new Error("Not Found");
-  err.status = 404;
-  next(err);
-});
+  // 404
+  app.use((_req: Request, _res: Response, next: NextFunction) => {
+    const err: any = new Error("Not Found");
+    err.status = 404;
+    next(err);
+  });
 
-// error handler
-app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
-  const status = err.status || 500;
-  const response: any = {
-    status: "error",
-    message: err.message || "Internal Server Error",
-  };
+  // error handler
+  app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
+    const status = err.status || 500;
+    const response: any = {
+      status: "error",
+      message: err.message || "Internal Server Error",
+    };
 
-  // show stack only in development
-  if (process.env.NODE_ENV === "development") {
-    response.stack = err.stack;
-  }
+    // show stack only in development
+    if (process.env.NODE_ENV === "development") {
+      response.stack = err.stack;
+    }
 
-  console.error(`[ERROR] ${err.message}`);
-  if (process.env.NODE_ENV === "development") {
-    console.error(err.stack);
-  }
+    console.error(`[ERROR] ${err.message}`);
+    if (process.env.NODE_ENV === "development") {
+      console.error(err.stack);
+    }
 
-  res.status(status).json(response);
-});
+    res.status(status).json(response);
+  });
 
-
-export default app;
+  return app;
+}
+export default createHttpApp(configuredPaymentProvider());

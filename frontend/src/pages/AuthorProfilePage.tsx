@@ -49,7 +49,7 @@ const AuthorProfilePage = () => {
             <div className="container mx-auto px-4 max-w-6xl">
 
                 {/* AUTHOR HEADER */}
-                <nav className="flex flex-wrap gap-5 mb-6"><Link className="link" to={`/author/${authorId}/memberships`}>Membership plans</Link><Link className="link" to={`/author/${authorId}/posts`}>Author posts</Link></nav>
+                <nav className="flex flex-wrap gap-5 mb-6"><Link className="link" to={`/author/${authorId}/memberships`}>Membership plans</Link><Link className="link" to={`/author/${authorId}/posts`}>Author posts</Link><Link className="link" to={`/author/${authorId}/donate`}>Donate</Link></nav>
                 <div className={`flex flex-col items-center md:flex-row md:items-start gap-6 p-8 rounded-2xl mb-10 shadow-sm
                     ${isDark ? 'bg-gray-900 border border-gray-800' : 'bg-white border border-gray-200'}`}
                 >

@@ -9,12 +9,12 @@ export default function MyMembershipsPage() {
     [error, setError] = useState(""),
     [busy, setBusy] = useState<number | null>(null),
     [status, setStatus] = useState("");
-  async function cancel(id: number) {
+  async function cancel(id: number, provider: string) {
     setBusy(id);
     setError("");
     setStatus("");
     try {
-      await api.post(`/memberships/${id}/cancel`);
+      await api.post(provider === "MANUAL" ? `/memberships/${id}/cancel` : `/payments/memberships/${id}/cancel`);
       const { data } = await api.get("/memberships/me");
       setItems(data.metadata.items);
       setStatus(
@@ -36,6 +36,7 @@ export default function MyMembershipsPage() {
     <main className="min-h-screen bg-base-200 p-6">
       <div className="max-w-3xl mx-auto space-y-6">
         <Link to="/">← HiBook</Link>
+        <Link className="link ml-6" to="/account/payments">Payment history</Link>
         <h1 className="text-3xl font-bold">My memberships</h1>
         {error && (
           <p role="alert" className="alert alert-error">
@@ -64,11 +65,11 @@ export default function MyMembershipsPage() {
               <Link to={`/author/${m.authorId}/memberships`} className="link">
                 View plans
               </Link>
-              {m.autoRenew && !["CANCELED", "EXPIRED"].includes(m.status) && (
+              {m.autoRenew && (
                 <button
                   className="btn"
                   disabled={busy !== null}
-                  onClick={() => cancel(m.id)}
+                  onClick={() => cancel(m.id, m.provider)}
                 >
                   {busy === m.id ? "Canceling…" : "Cancel renewal"}
                 </button>

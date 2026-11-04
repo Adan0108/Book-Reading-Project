@@ -2,6 +2,7 @@ import { pool } from "../../dbs/init.mysql";
 import type { PoolConnection, RowDataPacket } from "mysql2/promise";
 import { BadRequestError, ForbiddenError } from "../../core/error.response";
 import type { TierRule } from "../../services/entitlement.service";
+import { activeMembershipSql } from "./membershipAccess.sql";
 type Database = Pick<PoolConnection, "query">;
 
 export const getActiveMemberships = async (
@@ -14,8 +15,7 @@ export const getActiveMemberships = async (
      JOIN membership_tiers t ON t.id=m.tier_id AND t.author_id=m.author_id
      LEFT JOIN membership_tier_levels l ON l.tier_id=t.id
      WHERE m.user_id = ? AND m.author_id = ?
-       AND m.status = 'ACTIVE' AND m.started_at<=NOW()
-       AND m.current_period_end > NOW()
+       AND ${activeMembershipSql}
      ORDER BY COALESCE(l.level,0) DESC,m.current_period_end DESC
      `,
     [userId, authorId],

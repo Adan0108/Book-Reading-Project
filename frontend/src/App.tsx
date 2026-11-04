@@ -25,6 +25,8 @@ import AuthorPlansPage from './pages/AuthorPlansPage'
 import MyMembershipsPage from './pages/MyMembershipsPage'
 import AuthorPostsPage from './pages/AuthorPostsPage'
 import AuthorFeedPage from './pages/AuthorFeedPage'
+import DonationPage from './pages/DonationPage'
+import PaymentHistoryPage from './pages/PaymentHistoryPage'
 
 
 const App = () => {
@@ -41,6 +43,8 @@ const App = () => {
         <Route path="/author/:authorId" element={<AuthorProfilePage />} />
         <Route path="/author/:authorId/memberships" element={<AuthorPlansPage/>}/>
         <Route path="/author/:authorId/posts" element={<AuthorFeedPage/>}/>
+        <Route path="/author/:authorId/donate" element={<DonationPage/>}/>
+        <Route element={<AccountGuard/>}><Route path="/account/payments" element={<PaymentHistoryPage/>}/></Route>
         <Route element={<AccountGuard/>}><Route path="/account/memberships" element={<MyMembershipsPage/>}/></Route>
         <Route element={<AccountGuard />}><Route path="/account/author-application" element={<AuthorApplicationPage/>}/></Route>
         <Route element={<AccountGuard role="ADMIN"/>}><Route path="/admin/applications" element={<AdminApplicationsPage/>}/></Route>
@@ -53,6 +57,7 @@ const App = () => {
         <Route path="/author/dashboard" element={<AuthorDashboardPage />} />
         <Route path="/author/memberships" element={<AuthorMembershipsPage/>}/>
         <Route path="/author/posts" element={<AuthorPostsPage/>}/>
+        <Route path="/author/payments" element={<PaymentHistoryPage author/>}/>
         </Route>
 
         {/* Auth Pages */}
