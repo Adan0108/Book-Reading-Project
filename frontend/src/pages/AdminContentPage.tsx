@@ -1,7 +1,7 @@
 import { useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import AdminLayout from "../features/admin/AdminLayout";
-import { useAdminResource } from "../features/admin/useAdminResource";
+import { useApiResource } from "../lib/useApiResource";
 import api from "../lib/axios";
 import { message } from "../features/author/images";
 import NovelContent from "../features/reader/NovelContent";
@@ -28,7 +28,7 @@ export default function AdminContentPage() {
     kind = ["BOOK", "CHAPTER", "POST"].includes(params.get("kind") ?? "")
       ? params.get("kind")!
       : "BOOK";
-  const resource = useAdminResource<{
+  const resource = useApiResource<{
       items: Content[];
       nextCursor: number | null;
     }>(

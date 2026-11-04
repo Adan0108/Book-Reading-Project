@@ -5,6 +5,7 @@ import { useBookStore } from '../store/useBookStore';
 import { useThemeStore } from '../store/useThemeStore';
 import { FiPlus, FiEdit, FiList, FiGlobe, FiLock, FiStar, FiBookOpen, FiLoader, FiEdit3, FiCheckCircle, FiSettings } from 'react-icons/fi';
 import Header from './HomePage/Header';
+import AuthorStats from '../features/author/AuthorStats';
 import { bookService } from '@/services/bookService';
 
 
@@ -105,13 +106,12 @@ const AuthorDashboardPage = () => {
 
     return (
         <div className= {`min-h-screen pb-20 ${isDark ? 'bg-gray-950 text-gray-200' : 'bg-gray-50 text-gray-800'}`}>
-            <Header onStartTour={function (): void {
-                throw new Error('Function not implemented.');
-            } }/>
+            <Header/>
             <div className= 'container mx-auto px-4 max-w-6xl pt-10'>
 
                 {/* Dashboard Header */}
-                <nav className="flex flex-wrap gap-5 mb-6"><Link to="/author/memberships" className="link">Memberships</Link><Link to="/author/posts" className="link">Author posts</Link><Link to="/author/payments" className="link">Income</Link><Link to="/account/messages" className="link">Messages</Link></nav>
+                <nav className="flex flex-wrap gap-5 mb-6"><Link to="/author/memberships" className="link">Memberships</Link><Link to="/author/posts" className="link">Author posts</Link><Link to="/author/payments" className="link">Income</Link><Link to="/account/messages" className="link">Messages</Link><Link to="/author/profile" className="link">Public profile</Link></nav>
+                <AuthorStats/>
                 <div className= 'flex flex-col md:flex-row justify-between items-center mb-10 gap-4'>
                     <div>
                         <h1 className="text-4xl font-black flex items-center gap-3">

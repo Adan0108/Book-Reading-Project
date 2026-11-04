@@ -39,3 +39,7 @@ Approval locks the application and provisions its author profile, AUTHOR role an
 Apply `20261104_0002_auth_sessions.sql` and `20261104_0003_author_provisioning.sql` through the existing runner after a database backup and review. They have been applied only to the isolated QA schema. Keep the tables during application rollback; no legacy book, chapter or image content is converted. An old application rollback would reintroduce the audited auth defects and is not a security-safe fallback. Existing users must log in again after this rollout.
 
 See [test evidence](../mvp/TEST_REPORT.md). SMTP outside the local sink, production HTTPS/CORS/proxy behavior and deployment against the normal database remain unverified.
+
+## Client response ordering
+
+Client session generations prevent a late profile or refresh response from restoring a logged-out session, and prevent an older request's 401 from clearing a newer login. Account and author guards subscribe to identity changes. Profile verification during restoration skips interceptor refresh; otherwise a 401 can recursively await the same pending restoration promise. Regression tests reproduce all three stale-response races and a headed forced-bootstrap-401 journey verifies termination. These guards manage client state; durable server session checks remain authoritative.

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import AdminLayout from "../features/admin/AdminLayout";
-import { useAdminResource } from "../features/admin/useAdminResource";
+import { useApiResource } from "../lib/useApiResource";
 import api from "../lib/axios";
 import { message } from "../features/author/images";
 interface Account {
@@ -16,7 +16,7 @@ interface Account {
 export default function AdminUsersPage() {
   const [params, setParams] = useSearchParams(),
     role = params.get("role") === "AUTHOR" ? "AUTHOR" : "";
-  const resource = useAdminResource<{
+  const resource = useApiResource<{
       items: Account[];
       nextCursor: number | null;
     }>(`/admin/users?${params}`),

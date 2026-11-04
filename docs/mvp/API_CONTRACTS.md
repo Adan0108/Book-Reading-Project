@@ -86,3 +86,11 @@ Authenticated `POST /reports` accepts `{kind,resourceId,reason}` for available p
 ADMIN-only `GET /admin/reports?status=&cursor=` and `PATCH /admin/reports/:id` with `{status,version,reason}` manage review. Closed reports cannot be reopened. `GET`/`PUT /admin/moderation-policy` use `{reportsEnabled,reportsPerDay,version,reason}`; the allowed daily quota is 1â€“20. `GET /admin/audit?cursor=` is read-only. These lists use decreasing IDs and 50-row pages; stale versions return 409. All operational changes append audit reasons in the mutation transaction.
 
 Author book/chapter and post-management responses add moderation notices. Reader routes return unavailable for hidden content before returning cached bodies. See [moderation design](../architecture/ADMIN_MODERATION.md).
+
+## Discovery and private library
+
+Public `GET /books` accepts `query`, `genre`, `tag`, `sort` (recent/popular/updated), `page` and `limit` (maximum 50). `GET /discovery/filters` returns visible genre/tag options. `GET /authors/:id/profile` supports optional authentication and returns explicit public author data, counts and caller follow state.
+
+Authenticated routes: `GET`/`PATCH /user/me/profile`; `PUT /authors/:id/follow` with `{following}`; `PUT /library/bookmarks/:id` with `{bookmarked}`; `GET /library/books/:id`; `GET /library/bookmarks`, `/library/follows`, `/library/history` with optional cursor; `POST /library/history` with `{chapterId,progress}` (integer 0–100); and `DELETE /library/history/:id`. Identity always comes from verified authentication. Library pages contain at most 50 items and a nullable nextCursor. Unavailable entries redact former public metadata but remain removable.
+
+Approved authors use `GET`/`PATCH /authors/me/profile` with `{penName,bio}` and `GET /authors/me/analytics`. Account profile changes whitelist username, nickname, bio and isPrivate; email and roles cannot be changed there. Partial updates preserve omitted fields. Username conflicts return 409. See [privacy and cursor policy](../architecture/READER_LIBRARY.md).

@@ -1,6 +1,6 @@
 import { useSearchParams } from "react-router-dom";
 import AdminLayout from "../features/admin/AdminLayout";
-import { useAdminResource } from "../features/admin/useAdminResource";
+import { useApiResource } from "../lib/useApiResource";
 interface Audit {
   id: number;
   action: string;
@@ -10,7 +10,7 @@ interface Audit {
 }
 export default function AdminAuditPage() {
   const [params, setParams] = useSearchParams(),
-    resource = useAdminResource<{ items: Audit[]; nextCursor: number | null }>(
+    resource = useApiResource<{ items: Audit[]; nextCursor: number | null }>(
       `/admin/audit?${params}`,
     );
   return (

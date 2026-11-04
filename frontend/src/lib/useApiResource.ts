@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
-import api from "../../lib/axios";
-import { message } from "../author/images";
-export function useAdminResource<T>(endpoint: string) {
+import api from "./axios";
+import { message } from "../features/author/images";
+/** Abort stale reads and never show another endpoint's data under the current view. */
+export function useApiResource<T>(endpoint: string) {
   const [snapshot, setSnapshot] = useState<{
       endpoint: string;
       value: T;

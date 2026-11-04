@@ -10,13 +10,17 @@ export default function AuthorPlansPage() {
   const { authorId } = useParams();
   const billing = useCheckout();
   const [tiers, setTiers] = useState<AuthorTier[] | null>(null),
+    [authorName, setAuthorName] = useState(""),
     [error, setError] = useState("");
   useEffect(() => {
     let active = true;
     api
       .get(`/authors/${authorId}/tiers`)
       .then(({ data }) => {
-        if (active) setTiers(data.metadata.tiers);
+        if (active) {
+          setTiers(data.metadata.tiers);
+          setAuthorName(data.metadata.authorName ?? "");
+        }
       })
       .catch((e: unknown) => {
         if (active) setError(message(e));
@@ -28,20 +32,30 @@ export default function AuthorPlansPage() {
   return (
     <main className="min-h-screen bg-base-200 p-6 md:p-10">
       <div className="max-w-4xl mx-auto space-y-6">
-        <nav className="flex gap-5">
+        <nav className="flex flex-wrap gap-5">
           <Link to={`/author/${authorId}`}>← Author profile</Link>
           <Link to={`/author/${authorId}/posts`}>Author posts</Link>
           <Link to="/account/memberships">My memberships</Link>
           <Link to={`/author/${authorId}/donate`}>Donate</Link>
         </nav>
-        <h1 className="text-3xl font-bold">Support this author</h1>
+        <h1 className="text-3xl font-bold break-words">
+          Support {authorName || "this author"}
+        </h1>
         <p>
           A membership unlocks this author’s eligible stories and posts. It does
           not unlock other authors’ work. Higher tiers include lower-tier
           content.
         </p>
-        {billing.error && <p role="alert" className="alert alert-error">{billing.error}</p>}
-        <p>{billing.configuration?.mode === "fixture" ? "Payment test simulation. No real transaction." : "Sandbox checkout uses test payments only."}</p>
+        {billing.error && (
+          <p role="alert" className="alert alert-error">
+            {billing.error}
+          </p>
+        )}
+        <p>
+          {billing.configuration?.mode === "fixture"
+            ? "Payment test simulation. No real transaction."
+            : "Sandbox checkout uses test payments only."}
+        </p>
         {error ? (
           <p role="alert" className="alert alert-error">
             {error}
@@ -64,9 +78,22 @@ export default function AuthorPlansPage() {
                     <li key={b}>{b}</li>
                   ))}
                 </ul>
-                <button className="btn btn-primary" disabled={billing.busy || !billing.configuration?.configured}
-                  onClick={()=>billing.checkout({kind:"MEMBERSHIP",authorId:Number(authorId),tierId:t.id})}>
-                  {billing.busy ? "Opening checkout…" : billing.configuration?.configured ? `Subscribe to ${t.name}` : "Subscriptions unavailable"}
+                <button
+                  className="btn btn-primary"
+                  disabled={billing.busy || !billing.configuration?.configured}
+                  onClick={() =>
+                    billing.checkout({
+                      kind: "MEMBERSHIP",
+                      authorId: Number(authorId),
+                      tierId: t.id,
+                    })
+                  }
+                >
+                  {billing.busy
+                    ? "Opening checkout…"
+                    : billing.configuration?.configured
+                      ? `Subscribe to ${t.name}`
+                      : "Subscriptions unavailable"}
                 </button>
               </article>
             ))}

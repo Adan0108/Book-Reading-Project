@@ -1,6 +1,6 @@
 # HiBook MVP implementation
 
-**Release verdict: NOT READY.** Authentication, author provisioning, the writing studio/reader, tier/access management, sandbox billing/donations and member chat are merged. Live Stripe sandbox is UNVERIFIED without credentials. Admin moderation is under final verification. Discovery, operations and later integration phases remain outstanding. The [historical audit](../mvp-audit/README.md) records the original baseline, not the current regression result.
+**Release verdict: NOT READY.** Authentication, author provisioning, the writing studio/reader, tier/access management, sandbox billing/donations, member chat and admin moderation are merged. Discovery and private library verification passes. Live Stripe sandbox is UNVERIFIED without credentials. Post spoilers/artwork, operations and final release verification remain outstanding. The [historical audit](../mvp-audit/README.md) records the original baseline, not the current regression result.
 
 | Record | Purpose |
 |---|---|
@@ -15,6 +15,7 @@
 | [Payment sandbox setup](PAYMENT_SETUP.md) | Required configuration and external verification procedure |
 | [Member chat](../architecture/MEMBER_CHAT.md) | Privacy, expiry, persistence, socket delivery and recovery |
 | [Administration](../architecture/ADMIN_MODERATION.md) | Independent moderation, account actions, reports, audit and metrics |
+| [Discovery and library](../architecture/READER_LIBRARY.md) | Real catalog, profile privacy, follows, bookmarks and reading history |
 | [Current API changes](API_CONTRACTS.md) | Implemented authentication and structured-publishing additions |
 | [Remaining roadmap](../mvp-audit/IMPLEMENTATION_ROADMAP.md) | Baseline dependencies for later phases |
 
