@@ -1,35 +1,42 @@
-# HiBook implementation progress
+# HiBook MVP delivery record
 
-Updated 5 November 2026 (Australia/Sydney). Baseline audit: [readiness audit](../mvp-audit/README.md).
+Updated 5 November 2026, Australia/Sydney. **Core implementation is merged and locally verified.** The application revision verified on `main` is `fc6f022b3580cf5a2d477a8f4933726a409b6534`. Later release-record commits change documentation only. [Release readiness](RELEASE_READINESS.md) separates implementation, automated evidence, external integrations and public rollout.
 
-The platform is **not release ready**. This is a living implementation record, separate from the historical audit. A checked item requires implementation and recorded validation; passing the publishing suite alone does not establish MVP readiness.
+## Phase history
 
-| Phase | Status | Remaining acceptance work |
-|---|---|---|
-| Audit documentation preservation | MERGED | Commit `eed0a70`, pushed to main |
-| Authentication and author provisioning | MERGED | `fix/auth-session-security`: `bac8f04`; merge `4e602cd`; both remotes verified. 38 backend / 11 frontend tests and three headed E2E passed at merge. |
-| Text-first block studio and reader | MERGED | `feat/light-novel-editor`: `d326c94`; merge `30fef17`; both remotes verified. 47 backend / 12 frontend tests and six headed browser tests passed; types/lint/builds pass. |
-| Author memberships and entitlement policy | MERGED | `feat/author-memberships`: `17a6350`; merge `d55593e`; both remotes verified. 63 backend / 12 frontend tests and seven headed journeys passed, including optional-auth restoration and outage recovery. Actual conversations are a later dependency. |
-| Payments and donations | MERGED | `feat/payment-donations`: `8921b5a`; merge `1359447`; both remotes verified. 78 backend / 12 frontend tests and eight headed journeys passed at merge. Live Stripe sandbox UNVERIFIED: missing credentials. |
-| Member chat | MERGED | `feat/member-chat`: `a36e970`; merge `2e64620`; both remotes verified. 87 backend / 12 frontend tests and nine headed journeys at merge. Single-backend-instance delivery; no offline durable composer. |
-| Admin moderation | MERGED | `feat/admin-moderation`: independent visibility flags, reports, account suspension/session revocation, versioned settings/reviews, audit, actual statistics and admin UI. 97 backend / 12 frontend tests and all ten headed journeys passed; delayed-preview focused regression also passed. Types/lint/builds pass. |
-| Reader discovery and library | MERGED | Real catalog, profiles, follows/bookmarks and synchronized reading history; 109 backend / 15 frontend tests and twelve headed journeys pass. Core `bef86b4`, merge `4d9472c`, both remotes verified. Post spoilers/artwork remain a separate milestone. |
-| Operations and API documentation | MERGED | `3b8fe99`, merge `74ba157`, both remotes verified. Awaited startup, migration locks/checksums, Redis failure boundaries, OpenAPI, non-root application images and fresh Compose verification; 125 backend tests, thirteen headed journeys plus one built-stack journey pass. |
-| UI and release verification | VERIFIED | 127 backend / 18 frontend tests, fourteen headed journeys, 33 accessibility states and one final built Compose journey pass; final root README and engineering guides complete. Merged-main verification follows integration. |
+Counts below are the observed checks at each milestone, not percentages or coverage claims. B/F = backend/frontend tests; E2E = headed Chromium journeys. Every listed application feature branch remains available and its tip was confirmed on `origin` with `git ls-remote`.
 
-## Safety and environment
+| Phase | Status | Branch | Commit | Tests at milestone | Merge |
+|---|---|---|---|---|---|
+| Original local-first publishing | MERGED | `Q-FE` | `91ac82a` | 25 B / 11 F / 2 E2E | `82b4bf9` |
+| Preserve completed audit | MERGED | `main` documentation baseline | `eed0a70` | Historical audit retained; no app source change | Direct documentation commit |
+| Authentication and author provisioning | MERGED | `fix/auth-session-security` | `bac8f04` | 38 B / 11 F / 3 E2E | `4e602cd` |
+| Text-first studio and reader | MERGED | `feat/light-novel-editor` | `d326c94` | 47 B / 12 F / 6 E2E | `30fef17` |
+| Author tiers and shared entitlement policy | MERGED | `feat/author-memberships` | `17a6350` | 63 B / 12 F / 7 E2E | `d55593e` |
+| Sandbox billing and donations | MERGED | `feat/payment-donations` | `8921b5a` | 78 B / 12 F / 8 E2E | `1359447` |
+| Member-author chat | MERGED | `feat/member-chat` | `a36e970` | 87 B / 12 F / 9 E2E | `2e64620` |
+| Administration and moderation | MERGED | `feat/admin-moderation` | `8392429` | 97 B / 12 F / 10 E2E | `abaac79` |
+| Discovery, profiles and private library | MERGED | `feat/reader-discovery` | `bef86b4` | 109 B / 15 F / 12 E2E | `4d9472c` |
+| Post spoilers and optional artwork | MERGED | `feat/author-posts-media` | `cbca166` | 116 B / 15 F / 13 E2E | `9755dcd` |
+| Startup, migration safety, Redis, OpenAPI and Docker | MERGED | `feat/platform-operations` | `3b8fe99` | 125 B / 15 unchanged F / 13 E2E + 1 Compose | `74ba157` |
+| Cohesive accessible UI, final integration and root README | MERGED | `refactor/ui-design-system` | `5b2c349` | 127 B / 18 F / 14 E2E + 1 Compose; 33 rendered accessibility states | `fc6f022` |
 
-Use only the isolated `publishing_qa` MySQL fixture on localhost:3307 or the separate `hibook-mvp-verification-20261105` Compose project for verification writes. Do not migrate the normal configured database, flush shared Redis, send real email, create real financial transactions, or delete Cloudinary assets. Existing publishing cloud E2E tests create retained cloud assets and must be run intentionally. Never commit local `.env`, credentials, generated browser artifacts or database files.
+No merge conflict, force-push, reset or branch deletion occurred. Each implementation merge's application tree was checked against its tested feature tree. The unrelated original branch remains untouched. The final `docs/mvp-release` record contains no application-source changes; its commit/merge identifiers are supplied by the final Git commands and delivery report rather than a self-referential hash inside its own contents.
 
-## Current architectural changes
+## Final merged-main verification
 
-- Authentication is moving to purpose-bound RS256 tokens and durable MySQL session families. Rotation locks a session and compares its current refresh JTI; replay revokes that family. Password reset revokes all sessions in the password transaction. A legacy HMAC session requires login again.
-- Setup requires a short-lived random proof returned only after successful OTP verification. Only its SHA-256 digest is stored. Proof consumption and account activation share a transaction.
-- Author approval provisions both the author profile and role transactionally. Existing publishing ownership checks remain authoritative.
-- Browser access tokens remain in memory; the HttpOnly refresh cookie restores a session. The stored user ID is an identifier, not an authentication credential.
+Executed on `main` at `fc6f022`, after all implementation phases merged:
 
-Detailed validation and phase completion records will be added as they are executed. External integration configuration and verification must be reported separately from deterministic tests.
+- Backend types, **127 tests in sixteen files** (35.12 seconds), and production build passed.
+- Frontend types, lint, **18 tests in five files** (6.24 seconds), and production build passed.
+- Complete **fourteen headed journeys passed in 3.8 minutes**, including the actual rendered accessibility states, security/authorization/error paths, real cloud upload, long-form zero-image publication, payment fixtures, chat and moderation.
+- The separately built complete Compose journey passed in **25.1 seconds**; registration/local SMTP, operator provisioning, publication, outage/recovery and retained data were verified.
+- All application branch tips are ancestors of `main`; remote branch hashes matched. The main working tree was clean before this documentation record. [Exact commands and limits](TEST_REPORT.md) remain the authoritative execution log.
 
-## Author post completion
+## Environment and remaining actions
 
-`feat/author-posts-media` is MERGED (`cbca166`, merge `9755dcd`, both remotes verified): optional ordered artwork and spoiler controls reuse signed uploads and centralized entitlements; post save keys resolve ambiguous responses without duplicate posts. Backend 116 tests, frontend 15 tests, types/lint/builds and all thirteen headed journeys passed. This completes the remaining phase-seven product capabilities; operations and final UI/release verification are still outstanding.
+Verification writes used only the existing isolated `publishing_qa` MySQL on localhost:3307 and the separate `hibook-mvp-verification-20261105` Compose project. Normal database settings were not repointed and its migrations were not run. Shared Redis was never flushed/stopped. Cloudinary test assets, fixture data and the signed preset are retained; no cloud deletion, real financial transaction or real-user email was performed.
+
+The built local application is available at `http://localhost:8087`, with a development mailbox at `http://localhost:8027`, while that dedicated Compose project is running. Its random database passwords are in ignored `.env.compose.qa`. It has no external Stripe/Cloudinary configuration by default; unavailable integrations are reported honestly. Use the [deployment/testing guides](../deployment/README.md) for controlled startup/shutdown; do not delete retained volumes.
+
+External Stripe sandbox verification, external SMTP/TLS delivery, public HTTPS/proxy/cookie verification and a reviewed backed-up normal database rollout remain operator steps. Known limits include public image delivery after URL disclosure, moderate dependency advisories, database-resident signing keys requiring protected storage, a single chat backend, and no durable offline files/composer or exhaustive physical-device/memory stress testing. See [release readiness](RELEASE_READINESS.md).

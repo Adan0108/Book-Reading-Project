@@ -169,3 +169,25 @@ The final frozen-source built Compose journey passed (**one headed journey, 22.6
 Final main JavaScript: approximately **409.02 kB / 132.55 kB gzip**, down from roughly 761 / 234; optional author engine **997.79 / 307.88** remains lazy. The non-failing engine-size, DaisyUI @property and Node/test-loader warnings remain. Root README setup/stack/architecture/features were checked against source and the built-stack workflow. Detailed engineering Markdown is under docs; the concise root README is the explicit requested exception.
 
 The frozen-source Linux frontend was rebuilt once more after cleanup. Its entry is `index-Cr7nPBiL.js` (409,019 characters); the native Windows build entry is `index-DFKPbM0l.js` (approximately 409.02 kB). Platform build hashes differ, so no bit-for-bit cross-platform reproducibility is asserted. The built deployment is tested separately. Its public MPL license endpoint returns 200 and matches the license header. All relative Markdown links resolve.
+
+## Final cross-module regression on merged main
+
+Executed on `main` at **fc6f022b3580cf5a2d477a8f4933726a409b6534**, after all application milestones merged; the working tree was clean. Every delivered feature tip, including retained Q-FE, is an ancestor of main. `git ls-remote` confirmed all application branch hashes and origin/main. There were no conflicts.
+
+| Directory / command | Final observed result |
+|---|---|
+| backend: `npm.cmd run typecheck` | Passed |
+| backend: `$env:PUBLISHING_TEST_DATABASE='publishing_qa'; npm.cmd test` | **127 passed, sixteen files, 35.12 seconds**; real isolated MySQL/HTTP/Socket.IO/security/rollback/Redis checks included |
+| backend: `npm.cmd run build` | Passed |
+| backend lint | Not configured; no passing ESLint claim |
+| frontend: `npm.cmd run typecheck` | Passed |
+| frontend: `npm.cmd run lint` | Passed |
+| frontend: `npm.cmd test` | **18 passed, five files, 6.24 seconds** |
+| frontend: `npm.cmd run build` | Passed; main 409.02 kB / 132.55 gzip, optional engine 997.79 / 307.88 |
+| frontend: `npm.cmd run test:e2e` | **Fourteen headed journeys passed in 3.8 minutes**, including 33 rendered axe states |
+| frontend: `$env:COMPOSE_QA_ALLOW_WRITES='1'; npm.cmd run test:compose` | **One headed built-stack journey passed in 25.1 seconds** |
+| Git and docs | Clean main; no whitespace errors; relative documentation links resolve; all feature tips merged and remotes confirmed |
+
+The final source passes all ten requested journey categories across these tests: registration/discovery/reading/progress; author onboarding; long-form zero-image and illustrated publication; member checkout/access separation; donation histories; persisted/reconnecting chat; moderation; unauthorized/session/payment/upload security; responsive accessibility; and built local deployment. Payment journeys remain deterministic provider simulation, not external Stripe evidence. Cloudinary image journeys use real uploads and retain their resources. Local SMTP is real but uses sinks. No normal database rollout or public deployment is implied.
+
+The subsequent release-record commit changes documentation only; application code remains the verified merged-main tree. Non-failing build warnings and the remaining external/dependency/media/privacy/operational limits above remain explicitly recorded.

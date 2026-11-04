@@ -1,31 +1,34 @@
 # MVP acceptance checklist
 
-States: NOT STARTED, IN PROGRESS, BLOCKED, COMPLETED, VERIFIED, MERGED. A passing narrow capability does not complete its parent module.
+States: NOT STARTED, IN PROGRESS, BLOCKED, COMPLETED, VERIFIED, MERGED. Implementation status and external provider verification are deliberately separate. No completion percentage is assigned.
 
-| Category | Status | Implementation / evidence | Remaining work / commit |
+| Category | Status | Implementation / evidence | Related commits and remaining limits |
 |---|---|---|---|
-| Audit preservation | MERGED | `docs/mvp-audit/`, `docs/publishing/` | `eed0a70` |
-| Auth and sessions | MERGED | `session.service.ts`, `access.service.ts`, auth middleware, `auth.integration.test.ts`, `e2e/auth.spec.ts` | `bac8f04`, merge `4e602cd`; [passed checks](TEST_REPORT.md) |
-| Author approval | MERGED | Transactional application decisions, author backfill, application/review pages | `bac8f04`, merge `4e602cd`; headed onboarding passed |
-| Text-first block editor | MERGED | `features/studio/`, `domain/novelDocument.ts`, chapter document repository/migration | `d326c94`, merge `30fef17`; [passed checks](TEST_REPORT.md) |
-| Book/chapter CRUD and draft/publish | MERGED | Existing publishing service and tests; publishing report | Rich text integration; original merge `82b4bf9` |
-| Reader experience | MERGED | Structured and legacy rendering, typography, preferences, navigation/progress; desktop/mobile browser checks | `d326c94`, merge `30fef17`; discovery/library remain separate |
-| Optional Cloudinary images | MERGED | Signed intent/confirmation flow and existing E2E | Preserve through rich text changes; original merge `82b4bf9` |
-| Membership tiers and entitlements | MERGED | `membership.service.ts`, `entitlement.service.ts`, membership repository, policy/tier/post migration and UI | `17a6350`, merge `d55593e`; 63 backend / 12 frontend tests and seven headed journeys at merge. Actual chat remains a separate dependency. |
-| Payment adapter and sandbox evidence | MERGED | `payments/`, billing migrations/routes, plans, checkout/status/history UI; signed SDK fixtures and real MySQL | `8921b5a`, merge `1359447`; 78 backend / 12 frontend tests and eight headed journeys at merge. Live Stripe sandbox UNVERIFIED without credentials. |
-| Donations | MERGED | Server-validated USD checkout, ledger/splits/refunds, reader and author history UI | `8921b5a`, merge `1359447`; fixture end-to-end passed; no real financial transactions |
-| Member chat | MERGED | `chat/`, conversation repository, routes/migration, `features/chat/`, ChatPage | `a36e970`, merge `2e64620`; 87 backend / 12 frontend tests and nine headed journeys at merge |
-| Admin moderation | MERGED | `moderation.service.ts`, target/public-visibility repositories, migration/routes, shared admin UI, reports and author notices | `8392429`, merge `abaac79`; 97 backend / 12 frontend tests and all ten headed journeys passed; delayed-preview regression passed |
-| Search/discovery | MERGED | Actual catalog, genre/tag filters, stable bounded pagination, real author profiles | Headed discovery and privacy regression passes |
-| Profiles and library | MERGED | Scoped account/public author profiles, follows/bookmarks/history and actual author analytics | Posts still need spoilers and optional artwork |
-| Redis | VERIFIED | Bounded fail-closed security commands, SQL cache fallback, noeviction Compose, real isolated outage/recovery | Fresh Compose and regression evidence in test report |
-| OpenAPI | VERIFIED | Complete module coverage, reusable schemas/security/errors, JSON and Swagger UI, parser checks | Actual Swagger rendered in built-stack journey |
-| Docker deployment | VERIFIED | Backend/frontend/MySQL/Redis/mailbox, persistent private volumes, dependency health and migration gate | Local deployment only; production handoff remains |
-| UI/accessibility/responsive | VERIFIED | Shared layouts/navigation/access hooks; dark contrast, focus/reduced motion; 33 rendered axe states and inspected desktop/tablet/mobile screenshots | Physical touch and full conformance certification unverified |
-| Regression/release | VERIFIED | 127 backend / 18 frontend tests, fourteen headed journeys and built Compose journey passed | Merged-main verification and external rollout checks remain distinct |
+| Audit preservation | MERGED | Original `docs/mvp-audit/` and publishing report retained | `eed0a70`; historical findings are not current results |
+| Auth and sessions | MERGED | `session.service.ts`, `access.service.ts`, auth middleware; real database/HTTP and headed OTP/reset/replay regressions | `bac8f04`, `5b2c349`; external HTTPS/SMTP separate |
+| Author approval | MERGED | Transactional application decisions/profile/role, backfill and review UI | `bac8f04`; headed register-to-author journey passes |
+| Text-first block editor | MERGED | `features/studio/`, canonical `novelDocument.ts`, document repository/migration | `d326c94`; 100+ KiB text, formatting, autosave, reopening, optional artwork tested |
+| Book/chapter CRUD and draft/publish | MERGED | Transactional publishing, ordered assets and save journal | `91ac82a`, `d326c94`, `5b2c349`; legacy Markdown/IDs preserved |
+| Comfortable reader | MERGED | Structured/safe Markdown rendering, typography/theme, real TOC and navigation | `d326c94`, `5b2c349`; desktop/mobile and accessibility checks pass |
+| Optional Cloudinary images | MERGED | Signed intent/confirmation and bounded local-first upload service | `91ac82a`, `d326c94`, `cbca166`; real cloud tested, public delivery limitation documented |
+| Membership tiers | MERGED | Author-owned managed levels, platform pricing/share, versioned admin policy and UI | `17a6350`; at most two managed tiers, legacy relationships preserved |
+| Central server entitlements | MERGED | Shared author/book/chapter/post/chat policy and paid invoice window SQL | `17a6350`, `8921b5a`, `a36e970`; cross-author/tier/expiry/paid-period gaps tested |
+| Payment adapter and sandbox lifecycle | MERGED | Stripe adapter, server quotes, raw signature verification, atomic ledger/grants/replay/refunds/cancellation | `8921b5a`; SDK/HTTP/MySQL and labeled fixture browser journey pass |
+| Donations | MERGED | Server-validated amounts, split/refund records, reader/author histories | `8921b5a`; donations never grant membership; no live money/payout claim |
+| Member chat | MERGED | Durable conversations/messages/read positions, REST and Socket.IO authorization | `a36e970`; two-browser reconnect/retry/unread/expiry tests; one backend instance |
+| Administration/moderation | MERGED | Independent visibility flags, reports, suspension, settings, audit and actual statistics | `8392429`, `5b2c349`; concurrency, delayed preview and headed admin workflow pass |
+| Search/discovery | MERGED | Actual catalog/filter facets, bounded validated stable pagination and real author profiles | `bef86b4`, `5b2c349`; guest and signed-in journeys pass |
+| Account/author profiles and library | MERGED | Private/public biography separation, scoped updates, follows/bookmarks/history and analytics | `bef86b4`; collisions, privacy, tied cursors and progress entitlement tested |
+| Posts, spoilers, optional artwork | MERGED | `post.service.ts`, ordered media, save replay, teaser redaction and native spoiler reveal | `cbca166`, `5b2c349`; older posts paginate, real artwork/lost-response journey passes |
+| Redis and failure recovery | MERGED | Bounded fail-closed security commands, SQL cache fallback, dedup/noeviction policy | `3b8fe99`; actual isolated outage/recovery and 503 contracts tested |
+| Migration safety/startup | MERGED | Awaited dependencies, checksums/advisory lock, explicit production migration and readiness/draining | `3b8fe99`; fresh/rerun/changed/missing migration and failed-start tests pass |
+| OpenAPI | MERGED | All implemented modules, schemas, errors, roles/cookies/signature boundaries, JSON and Swagger UI | `3b8fe99`, `5b2c349`; existing parser validation and rendered Swagger pass |
+| Complete local Docker deployment | MERGED | Backend/frontend/MySQL/Redis/mailbox, private persistent volumes and health/migration gate | `3b8fe99`; fresh MySQL 8.4 and retained-data rebuilt-stack journey pass |
+| UI/UX and root README | MERGED | Shared auth/navigation/access hooks, real workspace/retries, focus/contrast/reduced motion, lazy routes | `5b2c349`; 33 axe states, inspected desktop/tablet/mobile; full certification not claimed |
+| Final cross-module regression | VERIFIED | `main` at `fc6f022`: 127 B / 18 F / fourteen headed journeys + one built Compose journey | Types/lint/builds pass; [exact report](TEST_REPORT.md) |
+| Audited critical security defects | VERIFIED | Setup proof, reset revocation, refresh replay, author provisioning and scoped authorization regressions pass | No known critical issue in executed scope; not a complete penetration audit |
+| External Stripe sandbox | BLOCKED | Integration code and deterministic lifecycle pass | Missing credentials; [external setup/verification](PAYMENT_SETUP.md) |
+| External SMTP/TLS | BLOCKED | Actual local SMTP/mailbox pass | External delivery and certificate verification remain operator checks; no real-user mail sent |
+| Public deployment and normal database | BLOCKED | Local deployment verified; reviewed migration/backup procedure documented | HTTPS/proxy/secrets/backups and normal database rollout not performed |
 
-Core business modules are implemented and locally verified. External Stripe/SMTP/HTTPS/normal-database rollout checks and documented operational limits remain open. No percentage or production-ready claim is assigned.
-
-| Additional category | Status | Evidence | Remaining |
-|---|---|---|---|
-| Post spoilers and optional artwork | MERGED | `post.service.ts`, shared asset repository, post migration/editor/feed; seven real-MySQL regressions and headed lost-response/spoiler/artwork journey | Public Cloudinary delivery limitation documented; operations and final release checks remain |
+Current dependency audit: nine backend and twelve frontend moderate advisories, zero high/critical. Other confirmed limits are public Cloudinary delivery, private-key storage operations, retained orphan assets/journals, single-instance socket delivery, in-memory unsaved files/composer and incomplete physical-device/maximum-memory coverage. See [release readiness](RELEASE_READINESS.md) and [security](../security/README.md).
