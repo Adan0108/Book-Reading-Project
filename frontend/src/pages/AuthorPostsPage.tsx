@@ -84,6 +84,7 @@ export default function AuthorPostsPage() {
               <h2 className="text-xl font-bold">
                 {editing ? "Edit post" : "New post"}
               </h2>
+              {editing?.moderationHidden&&<p role="note" className="alert alert-warning">This post is hidden by moderation. Saving does not restore public access. {editing.moderationReason}</p>}
               <fieldset disabled={busy} className="space-y-4">
                 <label className="block">
                   Post title
@@ -170,6 +171,7 @@ export default function AuthorPostsPage() {
                   >
                     <div>
                       <h3 className="font-semibold">{post.title}</h3>
+                      {post.moderationHidden&&<p className="text-warning">Hidden by moderation</p>}
                       <p>
                         {post.isDraft ? "Draft" : "Published"} ·{" "}
                         {post.visibility === "PUBLIC"

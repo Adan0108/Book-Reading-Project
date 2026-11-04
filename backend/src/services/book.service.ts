@@ -9,6 +9,7 @@ import * as authorRepo from '../models/repositories/author.repo';
 import * as membershipRepo from '../models/repositories/membership.repo';
 import {loadEntitlementContext,canReadChapter,assertEntitled} from './entitlement.service';
 import { cacheDel, cacheGetJson, cacheIncr, cacheSetJson,cacheSetNx } from '../utils/cache';
+import {moderationNotice} from '../models/repositories/moderation.repo';
 
 const BOOK_TTL = 60;      // seconds
 const CHAPTER_TTL = 60;   // seconds
@@ -279,6 +280,7 @@ export const authorGetBookDetail = async (userId: number, bookId: number) => {
   const chapters = await chapterRepo.listChapterHeadersByBookForAuthor(book.id, author.id);
 
   return {
+    ...await moderationNotice('BOOK',book.id),
     id: book.id,
     slug: book.slug,
     title: book.title,
@@ -321,6 +323,7 @@ export const authorGetChapterDetail = async (
   }
 
   return {
+    ...await moderationNotice('CHAPTER',chapter.id),
     id: chapter.id,
     bookId: chapter.book_id,
     index: chapter.chapter_no,

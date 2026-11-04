@@ -28,6 +28,13 @@ import AuthorFeedPage from './pages/AuthorFeedPage'
 import DonationPage from './pages/DonationPage'
 import PaymentHistoryPage from './pages/PaymentHistoryPage'
 import ChatPage from './pages/ChatPage'
+import AdminDashboardPage from './pages/AdminDashboardPage'
+import AdminUsersPage from './pages/AdminUsersPage'
+import AdminContentPage from './pages/AdminContentPage'
+import AdminReportsPage from './pages/AdminReportsPage'
+import AdminSettingsPage from './pages/AdminSettingsPage'
+import AdminAuditPage from './pages/AdminAuditPage'
+import AdminReconciliationPage from './pages/AdminReconciliationPage'
 
 
 const App = () => {
@@ -51,6 +58,9 @@ const App = () => {
         <Route element={<AccountGuard />}><Route path="/account/author-application" element={<AuthorApplicationPage/>}/></Route>
         <Route element={<AccountGuard role="ADMIN"/>}><Route path="/admin/applications" element={<AdminApplicationsPage/>}/></Route>
         <Route element={<AccountGuard role="ADMIN"/>}><Route path="/admin/membership-policy" element={<AdminMembershipPolicyPage/>}/></Route>
+        <Route element={<AccountGuard role="ADMIN"/>}>
+          <Route path="/admin" element={<AdminDashboardPage/>}/><Route path="/admin/users" element={<AdminUsersPage/>}/><Route path="/admin/content" element={<AdminContentPage/>}/><Route path="/admin/reports" element={<AdminReportsPage/>}/><Route path="/admin/settings" element={<AdminSettingsPage/>}/><Route path="/admin/audit" element={<AdminAuditPage/>}/><Route path="/admin/reconciliation" element={<AdminReconciliationPage/>}/>
+        </Route>
         <Route element={<AuthorGuard />}>
         <Route path="/author/comic/create" element={<CreateBookPage />} />
         <Route path="/author/comic/:bookId/edit" element={<EditBookPage />} />

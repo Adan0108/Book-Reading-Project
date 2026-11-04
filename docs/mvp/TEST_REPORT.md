@@ -103,3 +103,21 @@ The initial concurrent conversation test exposed a real foreign-key deadlock. A 
 Chat checks cover participant/admin boundaries, trusted Origin, forged or wrong-identity tokens, actual websocket delivery, plain text, idempotent/conflicting sends, bounded rates, pagination, scoped monotonic reads, expired-member history/send/join/reconnect rejection, suppressed stale live delivery and revoked sessions. The browser also tests offline recovery, reload, lost committed acknowledgment with the same retry key and one database row, mobile width and expiry-driven UI denial. The actual mobile chat screenshot was visually inspected.
 
 Artifacts are ignored under `frontend/test-results/`, including `chat-member-and-author-exc-9007d-s-and-lose-access-on-expiry-chromium/chat-mobile.png` and `payment-fixture-checkout-c-64fac-es-and-cancellation-persist-chromium/payments-mobile.png`. Focused runs replace prior artifacts. No external chat, email or financial service is used.
+
+## Admin moderation milestone (`feat/admin-moderation`)
+
+5 November 2026. All writes remain in the isolated QA schema.
+
+| Command | Observed result |
+|---|---|
+| `backend`: `$env:PUBLISHING_TEST_DATABASE='publishing_qa'; npm.cmd test` | 97 passed in eleven files, including ten real-MySQL moderation tests |
+| `backend`: `npm.cmd run typecheck`, `npm.cmd run build` | Passed; backend lint remains unconfigured |
+| `frontend`: `npm.cmd run typecheck`, `npm.cmd run lint`, `npm.cmd test`, `npm.cmd run build` | Passed; 12 component/service tests |
+| `frontend`: `npm.cmd run test:e2e -- moderation.spec.ts` | Final headed reader/admin/author workflow passed (26.6 seconds), including the deliberately delayed preview regression |
+| `frontend`: `npm.cmd run test:e2e` | Final ten headed journeys passed (1.9 minutes); six cloud test assets retained |
+
+Real database checks cover all admin route boundaries, credential-field omission, hiding warmed book/chapter bodies, public listing/TOC/count filtering, author republish resistance, post hiding, draft restoration, open-report deduplication, quotas, versioned reviews/settings, transactional audit reasons, account suspension/session revocation, pending-account activation denial, competing administrator suspensions and actual aggregate counts.
+
+The browser reports a chapter, reviews it, hides/restores it, checks the author's notice and immediate reader visibility, suspends/restores the reader with old sessions still revoked, saves moderation settings, inspects audit and checks mobile content management. An initial select label included option text; explicit accessible names fixed the interaction. The mobile table is intentionally contained horizontally, keyboard focusable, and does not widen the page. Its screenshot was visually inspected at `frontend/test-results/moderation-reader-report-a-90099-spension-affect-real-access-chromium/admin-content-mobile.png`.
+
+The preview regression holds an earlier response while selecting another chapter and checks that releasing it cannot replace the current preview. Endpoint-scoped result snapshots also prevent old filtered rows appearing under a new content type. No normal database migration or deployment was performed.

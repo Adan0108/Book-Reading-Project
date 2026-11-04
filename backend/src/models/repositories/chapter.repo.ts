@@ -1,12 +1,13 @@
 import { pool } from '../../dbs/init.mysql';
+import {notHiddenSql,releasedChapterSql} from './publicationVisibility.sql';
 
 export const listChapterHeadersByBook = async (bookId: number) => {
   const [rows] = await pool.query(
     `SELECT id, chapter_no AS \`index\`, title,
             visibility, published_at AS releaseAt,
             CASE WHEN is_draft = 0 AND published_at IS NOT NULL THEN 1 ELSE 0 END AS isPublished
-     FROM chapters
-     WHERE book_id = ? AND deleted_at IS NULL AND is_draft = 0 AND published_at <= NOW() AND (scheduled_at IS NULL OR scheduled_at<=NOW())
+     FROM chapters c
+     WHERE book_id = ? AND ${releasedChapterSql('c')}
      ORDER BY chapter_no ASC`,
     [bookId],
   );
@@ -16,8 +17,8 @@ export const listChapterHeadersByBook = async (bookId: number) => {
 export const findChapterByBookAndNoPublic = async (bookId: number, chapterNo: number) => {
   const [rows] = await pool.query(
     `SELECT *, (published_at <= NOW() AND (scheduled_at IS NULL OR scheduled_at<=NOW())) AS release_ready
-     FROM chapters
-     WHERE book_id = ? AND chapter_no = ? AND deleted_at IS NULL
+     FROM chapters c
+     WHERE book_id = ? AND chapter_no = ? AND deleted_at IS NULL AND ${notHiddenSql('CHAPTER','c')}
      LIMIT 1`,
     [bookId, chapterNo],
   );

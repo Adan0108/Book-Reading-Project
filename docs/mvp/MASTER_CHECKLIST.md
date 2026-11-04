@@ -14,8 +14,8 @@ States: NOT STARTED, IN PROGRESS, BLOCKED, COMPLETED, VERIFIED, MERGED. A passin
 | Membership tiers and entitlements | MERGED | `membership.service.ts`, `entitlement.service.ts`, membership repository, policy/tier/post migration and UI | `17a6350`, merge `d55593e`; 63 backend / 12 frontend tests and seven headed journeys at merge. Actual chat remains a separate dependency. |
 | Payment adapter and sandbox evidence | MERGED | `payments/`, billing migrations/routes, plans, checkout/status/history UI; signed SDK fixtures and real MySQL | `8921b5a`, merge `1359447`; 78 backend / 12 frontend tests and eight headed journeys at merge. Live Stripe sandbox UNVERIFIED without credentials. |
 | Donations | MERGED | Server-validated USD checkout, ledger/splits/refunds, reader and author history UI | `8921b5a`, merge `1359447`; fixture end-to-end passed; no real financial transactions |
-| Member chat | VERIFIED | `chat/`, conversation repository, routes/migration, `features/chat/`, ChatPage | 87 backend / 12 frontend tests and all nine headed journeys passed; single-process socket delivery |
-| Admin moderation | NOT STARTED | Application review alone is not moderation | Content/account controls, pricing/settings, audit log/dashboard |
+| Member chat | MERGED | `chat/`, conversation repository, routes/migration, `features/chat/`, ChatPage | `a36e970`, merge `2e64620`; 87 backend / 12 frontend tests and nine headed journeys at merge |
+| Admin moderation | VERIFIED | `moderation.service.ts`, target/public-visibility repositories, migration/routes, shared admin UI, reports and author notices | 97 backend / 12 frontend tests and all ten headed journeys passed; delayed-preview regression passed |
 | Search/discovery | IN PROGRESS | Search API exists | Real home catalog, stable validation/pagination and journeys |
 | Profiles and library | IN PROGRESS | Existing partial profile/detail pages | Author data, follows/bookmarks/history/posts |
 | Redis | IN PROGRESS | Cache, OTP, JTI and auth rates | Failure handling, cache availability checks and operational review |

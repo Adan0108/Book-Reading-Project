@@ -16,6 +16,7 @@ import {
   type Visibility,
 } from "./entitlement.service";
 import { findAvailableAuthor } from "../models/repositories/membership.repo";
+import { notHiddenSql } from "../models/repositories/publicationVisibility.sql";
 
 export async function savePost(
   userId: number,
@@ -89,11 +90,15 @@ export async function savePost(
 export async function myPosts(userId: number) {
   const author = await ownedAuthor(userId);
   const [items] = await pool.query<RowDataPacket[]>(
-    "SELECT id,title,body,visibility,minimum_tier_id AS minimumTierId,is_draft AS isDraft,UNIX_TIMESTAMP(published_at) AS publishedEpoch FROM author_posts WHERE author_id=? AND deleted_at IS NULL ORDER BY id DESC LIMIT 100",
+    "SELECT p.id,p.title,p.body,p.visibility,p.minimum_tier_id AS minimumTierId,p.is_draft AS isDraft,UNIX_TIMESTAMP(p.published_at) AS publishedEpoch,COALESCE(f.hidden,0) AS moderationHidden,f.reason AS moderationReason FROM author_posts p LEFT JOIN moderation_flags f ON f.kind='POST' AND f.resource_id=p.id WHERE p.author_id=? AND p.deleted_at IS NULL ORDER BY p.id DESC LIMIT 100",
     [author.id],
   );
   return {
-    items: items.map((row) => ({ ...row, isDraft: Boolean(row.isDraft) })),
+    items: items.map((row) => ({
+      ...row,
+      isDraft: Boolean(row.isDraft),
+      moderationHidden: Boolean(row.moderationHidden),
+    })),
   };
 }
 function postRule(row: RowDataPacket): TierRule[] {
@@ -121,7 +126,7 @@ export async function listPublicPosts(
     context = await loadEntitlementContext(userId, authorId);
   const [rows] = await pool.query<RowDataPacket[]>(
     `SELECT p.*,l.level,UNIX_TIMESTAMP(p.published_at) AS publishedEpoch FROM author_posts p LEFT JOIN membership_tier_levels l ON l.tier_id=p.minimum_tier_id
-    WHERE p.author_id=? AND p.id<? AND p.deleted_at IS NULL AND p.is_draft=0 AND p.published_at<=NOW() ORDER BY p.id DESC LIMIT 21`,
+    WHERE p.author_id=? AND p.id<? AND p.deleted_at IS NULL AND p.is_draft=0 AND p.published_at<=NOW() AND ${notHiddenSql("POST", "p")} ORDER BY p.id DESC LIMIT 21`,
     [authorId, cursor],
   );
   return {
@@ -154,7 +159,7 @@ export async function getPublicPost(
   const authorId = positiveId(authorValue, "author"),
     id = positiveId(idValue, "post");
   const [rows] = await pool.query<RowDataPacket[]>(
-    `SELECT p.*,l.level,(p.is_draft=0 AND p.published_at<=NOW()) AS released FROM author_posts p LEFT JOIN membership_tier_levels l ON l.tier_id=p.minimum_tier_id WHERE p.id=? AND p.author_id=? AND p.deleted_at IS NULL`,
+    `SELECT p.*,l.level,(p.is_draft=0 AND p.published_at<=NOW()) AS released FROM author_posts p LEFT JOIN membership_tier_levels l ON l.tier_id=p.minimum_tier_id WHERE p.id=? AND p.author_id=? AND p.deleted_at IS NULL AND ${notHiddenSql("POST", "p")}`,
     [id, authorId],
   );
   if (!rows[0]) throw new NotFoundError("Post unavailable");

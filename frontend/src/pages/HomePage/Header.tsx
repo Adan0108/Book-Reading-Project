@@ -244,6 +244,7 @@ const Header = ({ onStartTour }: HeaderProps) => {
                     <div className="p-2">
                       <button onClick={()=>{setShowUserMenu(false);navigate('/account/memberships');}} className="w-full text-left px-3 py-2 text-sm rounded-lg">My memberships</button>
                       <button onClick={()=>{setShowUserMenu(false);navigate('/account/messages');}} className="w-full text-left px-3 py-2 text-sm rounded-lg">Messages</button>
+                      {authUser.roles?.includes('ADMIN')&&<button onClick={()=>{setShowUserMenu(false);navigate('/admin');}} className="w-full text-left px-3 py-2 text-sm rounded-lg">Administration</button>}
                       {authUser.roles?.includes('AUTHOR')&&<button onClick={()=>{setShowUserMenu(false);navigate('/author/memberships');}} className="w-full text-left px-3 py-2 text-sm rounded-lg">Manage memberships</button>}
                       {authUser.roles?.includes('ADMIN')&&<button onClick={()=>{setShowUserMenu(false);navigate('/admin/membership-policy');}} className="w-full text-left px-3 py-2 text-sm rounded-lg">Membership policy</button>}
                       <button onClick={() => { setShowUserMenu(false); navigate('/account/author-application'); }} className="w-full text-left px-3 py-2 text-sm rounded-lg">Author application</button>
