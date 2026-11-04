@@ -1,3 +1,5 @@
+import { withTransaction } from '../dbs/transaction';
+import type { RowDataPacket } from 'mysql2/promise';
 import { BadRequestError, ConflictRequestError, NotFoundError, ForbiddenError } from "../core/error.response";
 import * as authorAppRepo from "../models/repositories/authorApplication.repo";
 import * as userRepo from "../models/repositories/user.repo";
@@ -82,15 +84,18 @@ export async function getMyLatest(userId: number) {
 }
 
 export async function withdraw(userId: number, id: number) {
-  const app = await authorAppRepo.findById(id);
+  return withTransaction(async db => {
+  const [rows] = await db.query<RowDataPacket[]>('SELECT * FROM author_applications WHERE id=? FOR UPDATE',[id]);
+  const app = rows[0];
   if (!app) throw new NotFoundError("Application not found");
   if (app.user_id !== userId) throw new ForbiddenError("Forbidden");
   if (app.status !== "PENDING" && app.status !== "UNDER_REVIEW") {
     throw new ConflictRequestError("Cannot withdraw a decided application");
   }
 
-  await authorAppRepo.withdrawById(id, userId);
+  await db.query("UPDATE author_applications SET status='WITHDRAWN',reviewed_by=NULL,reviewed_at=NULL WHERE id=?",[id]);
   return { id, status: "WITHDRAWN" };
+  });
 }
 /////////////////////////////////////////////////
 // ADMIN  //
@@ -126,37 +131,34 @@ export async function getDetail(id: number) {
 }
 
 export async function markUnderReview(id: number, adminUserId: number) {
-  const app = await authorAppRepo.findById(id);
+  return withTransaction(async db => {
+  const [rows] = await db.query<RowDataPacket[]>('SELECT * FROM author_applications WHERE id=? FOR UPDATE',[id]);
+  const app = rows[0];
   if (!app) throw new NotFoundError("Application not found");
   if (app.status !== "PENDING") throw new ConflictRequestError("Only PENDING applications can be marked UNDER_REVIEW");
 
-  await authorAppRepo.markUnderReview(id, adminUserId);
+  await db.query("UPDATE author_applications SET status='UNDER_REVIEW',reviewed_by=?,reviewed_at=NOW() WHERE id=?",[adminUserId,id]);
   return { id, status: "UNDER_REVIEW" };
+  });
 }
 
 export async function approve(id: number, adminUserId: number, body: any) {
-  const app = await authorAppRepo.findById(id);
-  if (!app) throw new NotFoundError("Application not found");
-  if (app.status !== "PENDING" && app.status !== "UNDER_REVIEW") {
-    throw new ConflictRequestError("Application already decided");
-  }
-
-  // upgrade user to AUTHOR
-  await userRepo.addRole(app.user_id, "AUTHOR");
-
-  await authorAppRepo.decideApplication({
-    id,
-    adminUserId,
-    status: "APPROVED",
-    decisionReason: body?.decisionReason ?? null,
-    internalNotes: body?.internalNotes ?? null,
+  return withTransaction(async db => {
+    const [rows] = await db.query<RowDataPacket[]>('SELECT * FROM author_applications WHERE id=? FOR UPDATE',[id]);
+    const application = rows[0];
+    if (!application) throw new NotFoundError('Application not found');
+    if (!['PENDING','UNDER_REVIEW','APPROVED'].includes(application.status)) throw new ConflictRequestError('Application already decided');
+    await db.query('INSERT INTO authors (user_id,pen_name,is_approved) VALUES (?,?,1) ON DUPLICATE KEY UPDATE pen_name=COALESCE(VALUES(pen_name),pen_name),is_approved=1',[application.user_id,application.pen_name]);
+    await db.query("INSERT IGNORE INTO user_roles (user_id,role_id) SELECT ?,id FROM roles WHERE code='AUTHOR'",[application.user_id]);
+    if (application.status !== 'APPROVED') await db.query("UPDATE author_applications SET status='APPROVED',reviewed_by=?,reviewed_at=NOW(),decision_reason=?,internal_notes=? WHERE id=?",[adminUserId,body?.decisionReason??null,body?.internalNotes??null,id]);
+    return {id,status:'APPROVED',userId:application.user_id};
   });
-
-  return { id, status: "APPROVED", userId: app.user_id };
 }
 
 export async function reject(id: number, adminUserId: number, body: any) {
-  const app = await authorAppRepo.findById(id);
+  return withTransaction(async db => {
+  const [rows] = await db.query<RowDataPacket[]>('SELECT * FROM author_applications WHERE id=? FOR UPDATE',[id]);
+  const app = rows[0];
   if (!app) throw new NotFoundError("Application not found");
   if (app.status !== "PENDING" && app.status !== "UNDER_REVIEW") {
     throw new ConflictRequestError("Application already decided");
@@ -167,13 +169,8 @@ export async function reject(id: number, adminUserId: number, body: any) {
     throw new BadRequestError("decisionReason is required");
   }
 
-  await authorAppRepo.decideApplication({
-    id,
-    adminUserId,
-    status: "REJECTED",
-    decisionReason,
-    internalNotes: body?.internalNotes ?? null,
-  });
+  await db.query("UPDATE author_applications SET status='REJECTED',reviewed_by=?,reviewed_at=NOW(),decision_reason=?,internal_notes=? WHERE id=?",[adminUserId,decisionReason,body?.internalNotes??null,id]);
 
   return { id, status: "REJECTED", userId: app.user_id };
+  });
 }

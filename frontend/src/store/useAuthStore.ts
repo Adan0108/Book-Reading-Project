@@ -7,6 +7,7 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
 
         authUser: null,
         accessToken: null,
+        setupToken: null,
         isSigningUp: false,
         isLoggingIn: false,
         isVerifying: false,
@@ -28,9 +29,8 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
                 toast.success('An OTP has been sent to your email!');
                 return true;
 
-            } catch (error) {
+            } catch {
 
-                console.error('Sign up error:', error);
                 toast.error('Sign up failed. Please try again.');
                 return false;
 
@@ -51,12 +51,11 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
 
             try {
                 const data = await authService.verifyOtp(email, otp);
-                set({authUser: data.user});
+                set({setupToken: data.metadata.setupToken});
                 toast.success("Verification successful!");
                 return true;
             }
-            catch (error) {
-                console.error('OTP verification error:', error);
+            catch {
                 toast.error("Invalid or expired OTP. Please try again.");
                 return false;
             }
@@ -80,8 +79,7 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
                 await authService.ResendOtp(email);
                 toast.success("A new code has been sent.");
             }
-            catch(error) {
-                console.error("Resend OTP error:", error);
+            catch {
                 toast.error("Failed to resend code. Please try again.");
             }
             finally {
@@ -101,15 +99,14 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
 
             try {
                 // Call the service with all three pieces of data
-                const data = await authService.setupPassword(email, username, password);
+                const data = await authService.setupPassword(email, username, password, get().setupToken ?? '');
 
                 // Profile is set! Store the user, clear the email, and celebrate.
-                set({ authUser: data.user, emailToVerify: null });
+                set({ authUser: data.metadata.user, emailToVerify: null, setupToken: null });
                 toast.success("Profile complete! Welcome.");
                 return true;
 
-            } catch (error) {
-                console.error("Setup password error:", error);
+            } catch {
                 toast.error("Failed to set up profile. Please try again.");
                 return false;
             } finally {
@@ -129,7 +126,7 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
                 }
 
                 if (data.metadata.tokens.accessToken) {
-                    localStorage.setItem('accessToken', data.metadata.tokens.accessToken);
+                    localStorage.removeItem('accessToken');
                 }
 
                 // 1. Set the token FIRST so the subsequent request is authenticated
@@ -146,8 +143,7 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
                 toast.success("Login successful! Welcome back.");
                 return true;
             }
-            catch (error) {
-                console.error("Login error:", error);
+            catch {
                 toast.error("Invalid email or password. Please try again.");
                 return false;
             }
@@ -160,13 +156,6 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
             const authUser = get().authUser;
             const userId = authUser?.id || Number(localStorage.getItem('userId'));
 
-            if (!authUser) {
-                localStorage.removeItem('userId');
-                localStorage.removeItem('accessToken');
-                set({ authUser: null, emailToVerify: null, accessToken: null });
-                return;
-            }
-
             if (!userId) {
                 // Just clear local state if we don't have an ID
                 set({ authUser: null, emailToVerify: null, accessToken: null });
@@ -176,17 +165,15 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
             }
 
             try {
-                const response = await authService.logout(userId);
-                console.log('Logout successful:', response);
+                await authService.logout(userId);
             }
-            catch (error) {
-                console.error("Logout API call failed:", error);
-                toast.error("Logout failed on server, but clearing local session.")
+            catch {
+                toast.error("Server sign-out could not be confirmed. Reconnect and sign out again.")
             }
             finally {
                 localStorage.removeItem('userId');
+                localStorage.removeItem('accessToken');
                 set({ authUser: null, emailToVerify: null, accessToken: null });
-                toast.success("You have been logged out.");
             }
         },
 
@@ -198,8 +185,7 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
                 toast.success('A password reset code has been sent to your email.');
                 return true;
             }
-            catch (error) {
-                console.error('Forgot password error:', error);
+            catch {
                 toast.error('Failed to send reset email. Please try again.');
                 set({ emailToVerify: null });
                 return false;
@@ -227,8 +213,7 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
                 toast.success("Password has been reset successfully!");
                 return true;
             }
-            catch (error) {
-                console.error("Reset password error:", error);
+            catch {
                 toast.error("Invalid or expired OTP. Please try again.");
                 return false;
             }
@@ -251,8 +236,7 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
                 await authService.forgotPassword(email);
                 toast.success("A new code has been sent.");
             }
-            catch (error) {
-                console.error("Resend password reset error:", error);
+            catch {
                 toast.error("Failed to resend code. Please try again.");
             }
             finally {
@@ -268,11 +252,14 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
             set({ isRefreshingToken: true });
             try{
 
-                const accessToken = await authService.refreshToken();
+                // Serialize cookie rotation across tabs as well as requests in this tab.
+                const accessToken = navigator.locks
+                    ? await navigator.locks.request('hibook-session-refresh', () => authService.refreshToken())
+                    : await authService.refreshToken();
 
 
-                // ADD THIS LINE: Save the newly minted token to localStorage!
-                localStorage.setItem('accessToken', accessToken);
+                // Access tokens stay in memory; the HttpOnly cookie restores a session.
+                localStorage.removeItem('accessToken');
 
                 // 2. Set the token immediately so fetchMe can use it
                 set({ accessToken });
@@ -280,10 +267,10 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
                 // 3. Chain the call
                 await get().fetchMe();
             }
-            catch (error){
-                console.log("Refresh failed (User likely not logged in):", error);
+            catch{
                 // If refresh fails, clear everything including localStorage
                 localStorage.removeItem('userId');
+                localStorage.removeItem('accessToken');
                 set({
                     authUser: null,
                     accessToken: null,
@@ -310,9 +297,7 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
                     set({ authUser: data });
                 }
 
-                console.log("Fetched user data:", data.metadata);
-            } catch (error) {
-                console.error("Fetch user error:", error);
+            } catch {
                 set({ authUser: null, accessToken: null });
             } finally {
                 set({ isFetchingUser: false });

@@ -9,7 +9,9 @@ test('real author publishing, direct Cloudinary uploads, edit and reader order',
   await page.goto('/login');
   await page.getByLabel('Email', { exact: true }).fill('publishing-e2e@example.invalid');
   await page.getByLabel('Password', { exact: true }).fill('Publishing-QA-only-2026!');
+  const loginResult=page.waitForResponse(r=>r.url().endsWith('/access/login') && r.request().method()==='POST');
   await page.getByRole('button', { name: 'Sign In', exact: true }).click();
+  const loginData=(await (await loginResult).json()).metadata;
   await expect(page).toHaveURL('/');
   await page.goto('/author/dashboard');
   await page.goto('/author/comic/create');
@@ -75,7 +77,7 @@ test('real author publishing, direct Cloudinary uploads, edit and reader order',
   expect(await pages.evaluateAll(imgs => imgs.map(i => (i as HTMLImageElement).src))).toEqual(expectedOrder);
   await page.setViewportSize({ width: 390, height: 844 });
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
-  const credentials = await page.evaluate(() => ({ token: localStorage.getItem('accessToken'), userId: localStorage.getItem('userId') }));
+  const credentials = {token:loginData.tokens.accessToken,userId:String(loginData.user.id)};
   const legacy = await request.post(`http://localhost:3000/v1/api/authors/me/books/${bookId}/chapters`, {
     headers: { Authorization: `Bearer ${credentials.token}`, 'x-client-id': credentials.userId! },
     data: { requestId: crypto.randomUUID(), title: 'Legacy Markdown', contentMd: `![Legacy page](${expectedOrder[0]})`, isDraft: false },

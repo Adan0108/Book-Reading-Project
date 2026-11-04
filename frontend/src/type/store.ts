@@ -1,6 +1,7 @@
 export interface AuthState {
     authUser: { id?: number, email: string, username?: string, roles?: string[]; } | null;
     accessToken: string | null;
+    setupToken: string | null;
     isSigningUp: boolean;
     isLoggingIn: boolean;
     isVerifying: boolean;

@@ -2,7 +2,8 @@ import { Request, Response } from "express";
 import * as AccessService from "../services/access.service";
 import { CREATED, OK } from "../core/success.response";
 import { BadRequestError } from "../core/error.response";
-import { rtCookieName, rtCookieOptions } from "../utils/cookieOptions";
+import { rtCookieName, rtCookieOptions, atCookieName, atCookieOptions } from "../utils/cookieOptions";
+import { revokeAllSessions } from '../services/session.service';
 
 class AccessController {
   // register = async (req: Request, res: Response) => {
@@ -35,7 +36,7 @@ class AccessController {
     if (!email || !password || !username) {
       throw new BadRequestError("Email, password, and username are required");
     }
-    const metadata = await AccessService.setupPassword(email, password, username);
+    const metadata = await AccessService.setupPassword(email, password, username, req.body.setupToken);
     return new CREATED({ message: "Account setup complete.", metadata }).send(res);
   };
 
@@ -67,28 +68,38 @@ class AccessController {
     if (!email || !password) throw new BadRequestError("email and password are required");
     const { user, tokens } = await AccessService.login(email, password);
     res.cookie(rtCookieName, tokens.refreshToken, rtCookieOptions); // set refresh token cookie
+    res.cookie(atCookieName,tokens.accessToken,atCookieOptions);
 
-    return new OK("LoginOK", { user, tokens }).send(res);
+    return new OK("LoginOK", { user, tokens: { accessToken: tokens.accessToken } }).send(res);
   };
 
   logout = async (req: Request, res: Response) => {
     if (!req.user) throw new BadRequestError("No auth context");
-    const result = await AccessService.logout({ uid: req.user.uid, jti: req.user.jti, exp: (req.user as any).exp });
+    const result = await AccessService.logout(req.user);
     res.clearCookie(rtCookieName, { path: "/" });
+    res.clearCookie(atCookieName, { path: '/' });
     return new OK("LogoutOK", result).send(res);
   };
 
   refresh = async (req: Request, res: Response) => {
     if (!req.user) throw new BadRequestError("No user context");
-    const tokens = await AccessService.refreshTokens(
-      req.user.uid,
-      req.user.email,
-      req.user.jti,
-      (req.user as any).exp
-    );
+    const tokens = await AccessService.refreshTokens(req.user);
     res.cookie(rtCookieName, tokens.refreshToken, rtCookieOptions);
+    res.cookie(atCookieName,tokens.accessToken,atCookieOptions);
 
-    return new OK("TokenRefreshed", { tokens }).send(res);
+    return new OK("TokenRefreshed", { tokens: { accessToken: tokens.accessToken } }).send(res);
+  };
+
+  logoutAll = async (req: Request, res: Response) => {
+    await revokeAllSessions(req.user!.uid);
+    res.clearCookie(rtCookieName, { path: '/' });
+    res.clearCookie(atCookieName, { path: '/' });
+    return new OK('All sessions signed out.', { ok: true }).send(res);
+  };
+
+  session = async (req: Request,res: Response) => {
+    res.setHeader('Cache-Control','no-store');
+    return new OK('Session restored.',{tokens:{accessToken:req.cookies[atCookieName]}}).send(res);
   };
 }
 

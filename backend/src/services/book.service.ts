@@ -154,7 +154,6 @@ export const getChapterContent = async (slug: string, chapterIndex: number, view
   if (chapter.is_draft === 1 || !chapter.published_at || !chapter.release_ready) {
     throw new NotFoundError('Chapter not available');
   }
-  console.log("UserId: " , viewerUserId)
   // membership gating
   if (chapter.visibility !== 'PUBLIC') {
     if (!viewerUserId) throw new AuthFailureError('Login required');

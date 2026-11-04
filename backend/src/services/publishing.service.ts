@@ -21,7 +21,7 @@ async function rows(db: any, sql: string, args: any[] = []): Promise<any[]> {
   const [result] = await db.query(sql, args); return result;
 }
 async function author(db: any, userId: number) {
-  const [a] = await rows(db, 'SELECT id FROM authors WHERE user_id = ? FOR UPDATE', [userId]);
+  const [a] = await rows(db, 'SELECT id FROM authors WHERE user_id = ? AND is_approved = 1 FOR UPDATE', [userId]);
   if (!a) throw new ForbiddenError('User is not an author');
   return a.id;
 }
@@ -65,7 +65,7 @@ export async function authorizeUpload(userId: number, body: any) {
 export async function confirmUpload(userId: number, id: string) {
   if (!uuid.test(id)) throw new BadRequestError('Invalid asset ID');
   const [a] = await rows(pool, `SELECT p.*, p.expires_at > NOW() AS is_valid FROM publishing_assets p JOIN authors a ON a.id = p.author_id
-    WHERE p.id = ? AND a.user_id = ?`, [id, userId]);
+    WHERE p.id = ? AND a.user_id = ? AND a.is_approved = 1`, [id, userId]);
   if (!a) throw new NotFoundError('Upload not found');
   if (a.confirmed_at) return { id: a.id, imageUrl: a.image_url };
   if (!a.is_valid) throw new BadRequestError('Upload authorization expired. Select the image again.');

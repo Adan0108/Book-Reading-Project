@@ -39,7 +39,6 @@ export const listBookChapters = async (req: Request, res: Response) => {
 
 export const getChapterByIndex = async (req: Request, res: Response) => {
   const user = (req as any).user;
-  console.log('User info:', user);
   const viewerId = user?.uid ?? user?.userId ?? undefined;
 
   const slug = req.params.slug;

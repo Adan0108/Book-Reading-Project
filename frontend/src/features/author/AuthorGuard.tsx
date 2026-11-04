@@ -23,6 +23,6 @@ export default function AuthorGuard() {
   }, [attempt]);
   if (state === 'allowed') return <Outlet />;
   return <main className="max-w-2xl mx-auto p-8 pt-24">{state === 'loading' ? <p role="status">Checking author access…</p> : <>
-    <p role="alert">{error}</p><Link to="/login" className="btn">Sign in</Link><button type="button" className="btn" onClick={() => setAttempt(a => a + 1)}>Retry</button>
+    <p role="alert">{error}</p><Link to="/login" className="btn">Sign in</Link><Link to="/account/author-application" className="btn">Apply to become an author</Link><button type="button" className="btn" onClick={() => setAttempt(a => a + 1)}>Retry</button>
   </>}</main>;
 }

@@ -14,5 +14,6 @@ export async function getProfile(userId: number) {
         id: user.id,
         email: user.email,
         username: profile?.username ?? null, // Handle case where profile might be missing
+        roles: await UserRepo.getRoles(userId),
     };
 }
