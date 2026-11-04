@@ -1,6 +1,6 @@
+import AuthorNavigation from "../features/author/AuthorNavigation";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import Header from "./HomePage/Header";
 import { useApiResource } from "../lib/useApiResource";
 import api from "../lib/axios";
 import { message } from "../features/author/images";
@@ -62,11 +62,12 @@ export default function ProfilePage({ author = false }: { author?: boolean }) {
   }
   return (
     <div className="min-h-screen bg-base-200">
-      <Header />
       <main
         id="main-content"
+        tabIndex={-1}
         className="max-w-3xl mx-auto p-4 md:p-10 space-y-6"
       >
+        {author && <AuthorNavigation />}
         <h1 className="text-3xl font-bold">
           {author ? "Author profile settings" : "Account profile"}
         </h1>

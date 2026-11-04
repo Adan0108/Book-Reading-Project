@@ -297,7 +297,9 @@ test("real catalog filters, profiles, follows, bookmarks and synchronized readin
     readerPage.getByLabel("Account biography", { exact: true }),
   ).toHaveCount(0);
   await expect(
-    readerPage.getByRole("link", { name: "Sign in", exact: true }),
+    readerPage
+      .locator("main")
+      .getByRole("link", { name: "Sign in", exact: true }),
   ).toBeVisible();
   expect(
     await readerPage.evaluate(() => localStorage.getItem("userId")),
@@ -339,7 +341,7 @@ test("rejected profile bootstrap terminates restoration and clears the saved acc
     })
     .toBeNull();
   await expect(
-    page.getByRole("link", { name: "Sign in", exact: true }),
+    page.locator("main").getByRole("link", { name: "Sign in", exact: true }),
   ).toBeVisible();
   await expect(
     page.getByLabel("Account biography", { exact: true }),

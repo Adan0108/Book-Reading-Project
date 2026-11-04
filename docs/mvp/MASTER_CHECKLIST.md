@@ -21,10 +21,10 @@ States: NOT STARTED, IN PROGRESS, BLOCKED, COMPLETED, VERIFIED, MERGED. A passin
 | Redis | VERIFIED | Bounded fail-closed security commands, SQL cache fallback, noeviction Compose, real isolated outage/recovery | Fresh Compose and regression evidence in test report |
 | OpenAPI | VERIFIED | Complete module coverage, reusable schemas/security/errors, JSON and Swagger UI, parser checks | Actual Swagger rendered in built-stack journey |
 | Docker deployment | VERIFIED | Backend/frontend/MySQL/Redis/mailbox, persistent private volumes, dependency health and migration gate | Local deployment only; production handoff remains |
-| UI/accessibility/responsive | IN PROGRESS | Application forms/guards and publishing alternatives | Cross-screen system, viewport and keyboard evidence |
-| Regression/release | IN PROGRESS | [Executed tests](TEST_REPORT.md) | Full cross-module suite and final release assessment |
+| UI/accessibility/responsive | VERIFIED | Shared layouts/navigation/access hooks; dark contrast, focus/reduced motion; 33 rendered axe states and inspected desktop/tablet/mobile screenshots | Physical touch and full conformance certification unverified |
+| Regression/release | VERIFIED | 127 backend / 18 frontend tests, fourteen headed journeys and built Compose journey passed | Merged-main verification and external rollout checks remain distinct |
 
-Known business gaps and non-auth audit risks remain open. No percentage or production-ready claim is assigned.
+Core business modules are implemented and locally verified. External Stripe/SMTP/HTTPS/normal-database rollout checks and documented operational limits remain open. No percentage or production-ready claim is assigned.
 
 | Additional category | Status | Evidence | Remaining |
 |---|---|---|---|

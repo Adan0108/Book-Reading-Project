@@ -226,6 +226,27 @@ describe.skipIf(process.env.PUBLISHING_TEST_DATABASE !== "publishing_qa")(
         ),
       ).not.toHaveProperty("images");
     });
+    it("paginates older owned posts without losing artwork or crossing author scope", async () => {
+      for (let i = 0; i < 52; i++)
+        await posts.savePost(owner, {
+          title: `Older post ${i}`,
+          isDraft: true,
+        });
+      const firstPage = await posts.myPosts(owner),
+        next = await posts.myPosts(owner, firstPage.nextCursor);
+      expect(firstPage.items).toHaveLength(50);
+      expect(firstPage.nextCursor).not.toBeNull();
+      expect(next.items.some((p) => p.id === postId)).toBe(true);
+      expect(
+        new Set([...firstPage.items, ...next.items].map((p) => p.id)).size,
+      ).toBe(firstPage.items.length + next.items.length);
+      expect(
+        next.items.find((p) => p.id === postId)?.images.map((i) => i.id),
+      ).toEqual([second]);
+      await expect(posts.myPosts(owner, "invalid")).rejects.toMatchObject({
+        status: 400,
+      });
+    });
     it("allows draft-only empty text but requires text for published updates", async () => {
       const saved = await posts.savePost(owner, {
         title: "Empty draft",

@@ -1,3 +1,4 @@
+import AuthorNavigation from "../features/author/AuthorNavigation";
 import { useEffect, useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
 import api from "../lib/axios";
@@ -174,11 +175,14 @@ export default function AuthorMembershipsPage() {
     load().catch((e: unknown) => setError(message(e)));
   }, []);
   return (
-    <main className="min-h-screen bg-base-200 p-5 md:p-10">
+    <main
+      id="main-content"
+      tabIndex={-1}
+      className="min-h-screen bg-base-200 p-5 md:p-10"
+    >
       <div className="max-w-5xl mx-auto space-y-6">
+        <AuthorNavigation />
         <nav className="flex gap-4 flex-wrap">
-          <Link to="/author/dashboard">← My books</Link>
-          <Link to="/author/posts">Author posts</Link>
           {data && (
             <Link to={`/author/${data.authorId}/memberships`}>
               Preview membership plans
@@ -241,7 +245,17 @@ export default function AuthorMembershipsPage() {
                     <tbody>
                       {members.items.map((m) => (
                         <tr key={m.id}>
-                          <td>{m.username || `Reader ${m.userId}`}{m.hasAccess&&<Link className="link block mt-2" to={`/account/messages?author=${data.authorId}&member=${m.userId}`}>Message member</Link>}</td>
+                          <td>
+                            {m.username || `Reader ${m.userId}`}
+                            {m.hasAccess && (
+                              <Link
+                                className="link block mt-2"
+                                to={`/account/messages?author=${data.authorId}&member=${m.userId}`}
+                              >
+                                Message member
+                              </Link>
+                            )}
+                          </td>
                           <td>{m.tierName}</td>
                           <td>{m.hasAccess ? "Active" : m.status}</td>
                           <td>

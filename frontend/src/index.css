@@ -1,25 +1,70 @@
 @import "tailwindcss";
-@import 'swiper/css';
-@import 'swiper/css/effect-coverflow';
-@import 'swiper/css/pagination';
-@import 'swiper/css/navigation';
+@import "swiper/css";
+@import "swiper/css/effect-coverflow";
+@import "swiper/css/pagination";
+@import "swiper/css/navigation";
 @plugin "daisyui";
 
+[data-theme="light"] {
+  --color-primary: #4338ca;
+  --color-primary-content: #ffffff;
+}
+[data-theme="dark"] {
+  --color-primary: #a5b4fc;
+  --color-primary-content: #111827;
+}
+/* Keep notification text at full contrast while containers move. */
+[data-sonner-toast],
+[data-sonner-toast] > * {
+  transition-property: transform, height, box-shadow !important;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+body {
+  margin: 0;
+  min-width: 320px;
+}
+:where(h1, h2, h3, p, a, button, summary) {
+  overflow-wrap: anywhere;
+}
+:where(button, a, input, textarea, select, summary, [tabindex]):focus-visible {
+  outline: 2px solid var(--color-primary, #765000);
+  outline-offset: 3px;
+}
+dialog {
+  max-inline-size: calc(100vw - 2rem);
+  max-block-size: calc(100dvh - 2rem);
+  overflow: auto;
+}
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
 .swiper-thumb-center .swiper-wrapper {
-    justify-content: center !important;
+  justify-content: center !important;
 }
 
 .swiper-thumb-center .swiper-slide-thumb-active img {
-    opacity: 1 !important;
-    transform: scale(1.05);
-    box-shadow: 0 0 12px rgba(255, 255, 255, 0.9);
-    border: 2px solid rgba(255, 255, 255, 1);
+  opacity: 1 !important;
+  transform: scale(1.05);
+  box-shadow: 0 0 12px rgba(255, 255, 255, 0.9);
+  border: 2px solid rgba(255, 255, 255, 1);
 }
-  
-  /* Dim non-active thumbnails */
+
+/* Dim non-active thumbnails */
 .swiper-thumb-center .swiper-slide img {
-    transition: all 0.3s ease;
-    opacity: 0.55;
-    border: 2px solid transparent;
+  transition: all 0.3s ease;
+  opacity: 0.55;
+  border: 2px solid transparent;
 }
-  

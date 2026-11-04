@@ -87,7 +87,11 @@ export default function PaymentHistoryPage({
     };
   }, [checkout, author, endpoint]);
   return (
-    <main className="min-h-screen bg-base-200 p-6">
+    <main
+      id="main-content"
+      tabIndex={-1}
+      className="min-h-screen bg-base-200 p-6"
+    >
       <div className="mx-auto max-w-4xl space-y-6">
         <nav className="flex gap-5">
           <Link to={author ? "/author/dashboard" : "/"}>

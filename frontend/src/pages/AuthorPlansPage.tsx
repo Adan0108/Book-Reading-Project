@@ -30,7 +30,11 @@ export default function AuthorPlansPage() {
     };
   }, [authorId]);
   return (
-    <main className="min-h-screen bg-base-200 p-6 md:p-10">
+    <main
+      id="main-content"
+      tabIndex={-1}
+      className="min-h-screen bg-base-200 p-6 md:p-10"
+    >
       <div className="max-w-4xl mx-auto space-y-6">
         <nav className="flex flex-wrap gap-5">
           <Link to={`/author/${authorId}`}>← Author profile</Link>

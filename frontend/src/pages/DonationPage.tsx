@@ -12,7 +12,11 @@ export default function DonationPage() {
   const [amount, setAmount] = useState("5.00"),
     [validation, setValidation] = useState("");
   return (
-    <main className="min-h-screen bg-base-200 p-6">
+    <main
+      id="main-content"
+      tabIndex={-1}
+      className="min-h-screen bg-base-200 p-6"
+    >
       <div className="mx-auto max-w-xl space-y-6">
         <Link to={`/author/${authorId}`}>← Author profile</Link>
         <h1 className="text-3xl font-bold break-words">

@@ -16,7 +16,7 @@ export default function AuthorStats() {
   return (
     <section
       aria-label="Author statistics"
-      className="grid sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-8"
+      className="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-8"
     >
       {[
         ["Stories", resource.data.books],
@@ -25,7 +25,10 @@ export default function AuthorStats() {
         ["Followers", resource.data.followers],
         ["Eligible memberships", resource.data.eligibleMemberships],
       ].map(([label, value]) => (
-        <article className="card bg-base-100 text-base-content p-5" key={label}>
+        <article
+          className="card bg-base-100 text-base-content p-5 last:col-span-2 lg:last:col-span-1"
+          key={label}
+        >
           <h2 className="text-sm">{label}</h2>
           <p className="text-2xl font-bold mt-2">{value}</p>
         </article>

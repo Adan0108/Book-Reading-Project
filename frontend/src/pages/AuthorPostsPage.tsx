@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { isAxiosError } from "axios";
-import { Link } from "react-router-dom";
+
 import api from "../lib/axios";
 import { ImageEditor } from "../features/author/ImageEditor";
 import UnsavedWork from "../features/author/UnsavedWork";
+import AuthorNavigation from "../features/author/AuthorNavigation";
 import {
   message,
   releaseImage,
@@ -31,6 +32,7 @@ export default function AuthorPostsPage() {
     [loading, setLoading] = useState(true),
     [busy, setBusy] = useState(false),
     [uncertain, setUncertain] = useState(false);
+  const [cursor, setCursor] = useState<number | null>(null);
   const lock = useRef(false),
     pending = useRef<{
       url: string;
@@ -43,6 +45,7 @@ export default function AuthorPostsPage() {
       api.get("/authors/me/tiers"),
     ]);
     setPosts(list.data.metadata.items);
+    setCursor(list.data.metadata.nextCursor ?? null);
     setTiers(plans.data.metadata.tiers);
   }
   useEffect(() => {
@@ -155,13 +158,14 @@ export default function AuthorPostsPage() {
   }
   const hidden = posts.find((p) => p.id === editing)?.moderationHidden;
   return (
-    <main id="main-content" className="min-h-screen bg-base-200 p-4 sm:p-6">
+    <main
+      id="main-content"
+      tabIndex={-1}
+      className="min-h-screen bg-base-200 p-4 sm:p-6"
+    >
       <UnsavedWork dirty={dirty} saving={busy} />
       <div className="max-w-4xl mx-auto space-y-6">
-        <nav className="flex flex-wrap gap-5">
-          <Link to="/author/dashboard">My books</Link>
-          <Link to="/author/memberships">Memberships</Link>
-        </nav>
+        <AuthorNavigation />
         <h1 className="text-3xl font-bold">Author posts</h1>
         <p>
           Share text updates with your readers or members. Artwork is optional.
@@ -351,6 +355,30 @@ export default function AuthorPostsPage() {
                 <p>No updates yet.</p>
               )}
             </section>
+            {cursor && (
+              <button
+                type="button"
+                className="btn"
+                disabled={busy}
+                onClick={async () => {
+                  setBusy(true);
+                  setError("");
+                  try {
+                    const { data } = await api.get("/authors/me/posts", {
+                      params: { cursor },
+                    });
+                    setPosts((current) => [...current, ...data.metadata.items]);
+                    setCursor(data.metadata.nextCursor);
+                  } catch (error) {
+                    setError(message(error));
+                  } finally {
+                    setBusy(false);
+                  }
+                }}
+              >
+                Older posts
+              </button>
+            )}
           </>
         )}
         {!loading && error && (

@@ -659,7 +659,7 @@ export function createOpenApiDocument(): Document {
     object({ items: array(ref("Story")), total: money, page: id, limit: id }),
     undefined,
     "author",
-    paging,
+    [...paging, query("status", enumeration("DRAFT", "PUBLISHED", "HIDDEN"))],
   );
   route(
     "get",
@@ -825,9 +825,10 @@ export function createOpenApiDocument(): Document {
     "/authors/me/posts",
     "Posts",
     "Owned posts including drafts and moderation notices",
-    object({ items: array(ref("Post")) }),
+    page(ref("Post")),
     undefined,
     "author",
+    cursor,
   );
   route(
     "post",

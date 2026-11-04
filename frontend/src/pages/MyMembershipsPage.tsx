@@ -14,7 +14,11 @@ export default function MyMembershipsPage() {
     setError("");
     setStatus("");
     try {
-      await api.post(provider === "MANUAL" ? `/memberships/${id}/cancel` : `/payments/memberships/${id}/cancel`);
+      await api.post(
+        provider === "MANUAL"
+          ? `/memberships/${id}/cancel`
+          : `/payments/memberships/${id}/cancel`,
+      );
       const { data } = await api.get("/memberships/me");
       setItems(data.metadata.items);
       setStatus(
@@ -33,10 +37,16 @@ export default function MyMembershipsPage() {
       .catch((e: unknown) => setError(message(e)));
   }, []);
   return (
-    <main className="min-h-screen bg-base-200 p-6">
+    <main
+      id="main-content"
+      tabIndex={-1}
+      className="min-h-screen bg-base-200 p-6"
+    >
       <div className="max-w-3xl mx-auto space-y-6">
         <Link to="/">← HiBook</Link>
-        <Link className="link ml-6" to="/account/payments">Payment history</Link>
+        <Link className="link ml-6" to="/account/payments">
+          Payment history
+        </Link>
         <h1 className="text-3xl font-bold">My memberships</h1>
         {error && (
           <p role="alert" className="alert alert-error">

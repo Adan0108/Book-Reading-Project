@@ -45,7 +45,7 @@ Tier writes accept `{name,description,benefits,available,existingTierId?}`. Pric
 
 `GET /membership-policy` requires AUTHOR/ADMIN; `PUT /admin/membership-policy` requires ADMIN and `{version,currency,tierOneName,tierTwoName,tierOneCents,tierTwoCents,tierTwoEnabled,revenueShareBps}`. A stale version returns 409. Changes are transactionally audited.
 
-`GET /memberships/me` returns the caller's membership status, author/tier, renewal state, period end and current `hasAccess`. `POST /memberships/:membershipId/cancel` disables renewal for a caller-owned manual membership without shortening its paid period. Provider-backed cancellation remains 503 until the billing phase.
+`GET /memberships/me` returns the caller's membership status, author/tier, renewal state, period end and current `hasAccess`. `POST /memberships/:membershipId/cancel` disables renewal for a caller-owned manual membership without shortening its paid period. Provider-backed cancellation uses `/payments/memberships/:membershipId/cancel` and confirms cancel-at-period-end with the provider; missing configuration returns 503.
 
 Publishing accepts optional `requiredTierIds` on books/chapters. TIERS requires owned tier relationships. Omission preserves an existing selection. Parent-book and child-chapter restrictions both apply. Tier 2 includes tier 1 only for the same author; unmapped legacy tiers retain exact matching.
 
@@ -100,3 +100,6 @@ Approved authors use `GET`/`PATCH /authors/me/profile` with `{penName,bio}` and 
 Existing author post writes additionally accept `{isSpoiler,imageAssetIds,requestId}`. Image references are ordered, distinct, confirmed, author-owned assets with purpose `post`, at most eight. Omission preserves existing references and spoiler state on edit. Published posts require text. UUID save keys provide transactionally recorded replay and return 409 for conflicting reuse.
 
 Upload authorization accepts purpose `post` without bookId and uses the same signed image policy and confirmation endpoint. Author management and entitled public responses add `{isSpoiler,images:[{id,imageUrl,pageOrder}]}`. Locked teasers expose the spoiler flag but omit both body and images. Admin post previews include ordered artwork. See [post design and delivery limitations](../architecture/AUTHOR_POSTS.md).
+
+
+Owned book lists now validate integer page/limit, bounded search and DRAFT/PUBLISHED/HIDDEN status, with an ID tie breaker after update time. Owned post lists use a 50-row decreasing-ID cursor and nullable nextCursor; older artwork references remain ordered and scoped.

@@ -3,7 +3,6 @@ import { Link, useParams, useSearchParams } from "react-router-dom";
 import api from "../lib/axios";
 import { message } from "../features/author/images";
 import { useAuthStore } from "../store/useAuthStore";
-import Header from "./HomePage/Header";
 import StoryCard from "../features/catalog/StoryCard";
 import type { PublicAuthor, StorySummary } from "../features/catalog/types";
 export default function AuthorProfilePage() {
@@ -67,9 +66,9 @@ export default function AuthorProfilePage() {
   }
   return (
     <div className="min-h-screen bg-base-200">
-      <Header />
       <main
         id="main-content"
+        tabIndex={-1}
         className="mx-auto max-w-6xl p-4 md:p-10 space-y-8"
       >
         <Link className="link" to="/">

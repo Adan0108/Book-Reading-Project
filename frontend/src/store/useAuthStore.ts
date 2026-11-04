@@ -286,7 +286,10 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
       if (generation === sessionGeneration) set({ authUser: profile });
     } catch (error) {
       if (generation !== sessionGeneration) return;
-      if (!isAxiosError(error) || error.response?.status !== 401) throw error;
+      if (!isAxiosError(error) || error.response?.status !== 401) {
+        set({ accessToken: null });
+        throw error;
+      }
       sessionGeneration++;
       // If refresh fails, clear everything including localStorage
       localStorage.removeItem("userId");

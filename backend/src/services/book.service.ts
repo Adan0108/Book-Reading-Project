@@ -228,24 +228,19 @@ export const listBooksByAuthorPublic = async (q: {
   };
 };
 
-export const authorListMyBooks = async (userId: number, q: {
-  query?: string;
-  status?: any;
-  page?: any;
-  limit?: any;
-}) => {
+export const authorListMyBooks = async (userId: number, q: Record<string,unknown>) => {
   const author = await authorRepo.findAuthorByUserId(userId);
   if (!author) throw new ForbiddenError('User is not an author');
 
-  const page = Math.max(1, Number(q.page ?? 1));
-  const limit = Math.min(50, Math.max(1, Number(q.limit ?? 20)));
-
-  const status = q.status ? String(q.status).toUpperCase() : undefined;
+  const {page,limit,query}=pageQuery(q);
+  if(q.status!==undefined&&typeof q.status!=='string')throw new BadRequestError('Invalid publication status');
+  const status=typeof q.status==='string'&&q.status?q.status.toUpperCase():undefined;
+  if(status!==undefined&&status!=='DRAFT'&&status!=='PUBLISHED'&&status!=='HIDDEN')throw new BadRequestError('Invalid publication status');
 
   const { items, total } = await bookRepo.listMyBooksForAuthor({
     authorId: author.id,
-    query: q.query,
-    status: status as any,
+    query,
+    status,
     page,
     limit,
   });

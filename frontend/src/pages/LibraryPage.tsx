@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import Header from "./HomePage/Header";
 import { useApiResource } from "../lib/useApiResource";
 import api from "../lib/axios";
 import { message } from "../features/author/images";
@@ -55,9 +54,9 @@ export default function LibraryPage() {
   }
   return (
     <div className="min-h-screen bg-base-200">
-      <Header />
       <main
         id="main-content"
+        tabIndex={-1}
         className="max-w-4xl mx-auto p-4 md:p-10 space-y-6"
       >
         <h1 className="text-3xl font-bold">My library</h1>

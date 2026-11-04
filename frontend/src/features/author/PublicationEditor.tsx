@@ -66,7 +66,7 @@ export default function PublicationEditor({
   );
   const [bookTitle, setBookTitle] = useState("");
   const [bookVisibility, setBookVisibility] = useState("PUBLIC");
-  const [moderationMessage,setModerationMessage]=useState('');
+  const [moderationMessage, setModerationMessage] = useState("");
   const [tierOptions, setTierOptions] = useState<AuthorTier[]>([]);
   const [tierError, setTierError] = useState("");
   const [requiredTierIds, setRequiredTierIds] = useState<number[]>([]);
@@ -161,8 +161,12 @@ export default function PublicationEditor({
         if (cancelled) return;
         setBookTitle(b.title);
         setBookVisibility(b.visibility ?? "PUBLIC");
-        const hidden=[b,data].find(item=>item.moderationHidden);
-        setModerationMessage(hidden?`This content is hidden by moderation. Saving does not restore public access. ${hidden.moderationReason??''}`:'');
+        const hidden = [b, data].find((item) => item.moderationHidden);
+        setModerationMessage(
+          hidden
+            ? `This content is hidden by moderation. Saving does not restore public access. ${hidden.moderationReason ?? ""}`
+            : "",
+        );
         if (edit) {
           setRequiredTierIds(data.requiredTierIds ?? []);
           setForm({
@@ -446,6 +450,8 @@ export default function PublicationEditor({
   const input = "input input-bordered w-full";
   return (
     <main
+      id="main-content"
+      tabIndex={-1}
       className={`min-h-screen pt-24 pb-16 px-4 ${isDark ? "bg-gray-950 text-gray-100" : "bg-gray-50 text-gray-900"}`}
     >
       <div className="max-w-4xl mx-auto">
@@ -469,7 +475,11 @@ export default function PublicationEditor({
             {error}
           </div>
         )}
-        {moderationMessage&&<p role="note" className="alert alert-warning my-4">{moderationMessage}</p>}
+        {moderationMessage && (
+          <p role="note" className="alert alert-warning my-4">
+            {moderationMessage}
+          </p>
+        )}
         {loading ? (
           <p role="status">Loading…</p>
         ) : loadFailed ? (

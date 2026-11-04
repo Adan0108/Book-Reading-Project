@@ -86,7 +86,11 @@ export default function AuthorFeedPage() {
     }
   }
   return (
-    <main id="main-content" className="min-h-screen bg-base-200 p-6">
+    <main
+      id="main-content"
+      tabIndex={-1}
+      className="min-h-screen bg-base-200 p-6"
+    >
       <div className="max-w-3xl mx-auto space-y-6">
         <nav className="flex gap-5">
           <Link to={`/author/${authorId}`}>← Author profile</Link>

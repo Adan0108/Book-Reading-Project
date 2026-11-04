@@ -406,6 +406,39 @@ describe.skipIf(!enabled)(
         (await request(app).get(`/v1/api/authors/${authorId}/profile`)).status,
       ).toBe(200);
     });
+    it("rejects malformed owned catalog pagination before SQL and filters real drafts", async () => {
+      for (const query of [
+        { page: 1.5 },
+        { limit: NaN },
+        { status: "invented" },
+        { status: ["DRAFT"] },
+        { query: ["x"] },
+      ])
+        await expect(
+          books.authorListMyBooks(owner, query),
+        ).rejects.toMatchObject({ status: 400 });
+      const result = await books.authorListMyBooks(owner, {
+        status: "DRAFT",
+        limit: 1,
+        page: 1,
+      });
+      expect(result.total).toBe(1);
+      expect(result.items).toHaveLength(1);
+      expect(result.items[0].status).toBe("DRAFT");
+      await pool.query(
+        "UPDATE books SET updated_at='2026-01-01 00:00:00' WHERE author_id=?",
+        [authorId],
+      );
+      const [ids] = await pool.query<RowDataPacket[]>(
+        "SELECT id FROM books WHERE author_id=? ORDER BY id DESC",
+        [authorId],
+      );
+      for (let page = 1; page <= 3; page++)
+        expect(
+          (await books.authorListMyBooks(owner, { page, limit: 1 })).items[0]
+            .id,
+        ).toBe(ids[page - 1].id);
+    });
     it("returns actual owned-author analytics and redacts unavailable followed authors", async () => {
       const stats = await reader.authorAnalytics(owner);
       expect(stats.books).toBe(3);

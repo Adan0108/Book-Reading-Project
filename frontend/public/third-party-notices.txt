@@ -1,0 +1,12 @@
+HiBook third-party notices
+
+The authoring engine uses unmodified @blocknote/core, @blocknote/react and
+@blocknote/mantine version 0.57.0 under the Mozilla Public License 2.0.
+The license is included at /licenses/blocknote-MPL-2.0.txt.
+Corresponding upstream source:
+https://github.com/TypeCellOS/BlockNote/tree/37614ab348dcc7faa830a9a88437b37197a2162d
+Package source metadata: @blocknote/core@0.57.0, npm repository/gitHead.
+HiBook's own adapters and canonical document schema live in this repository.
+
+Other dependencies retain their respective licenses and upstream notices.
+These editor notices do not assign a new license to the HiBook repository.

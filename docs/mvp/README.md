@@ -1,6 +1,6 @@
 # HiBook MVP implementation
 
-**Release verdict: NOT READY.** Authentication, author provisioning, the writing studio/reader, tier/access management, sandbox billing/donations, member chat and admin moderation are merged. Discovery and private library are merged; post spoilers/artwork are merged. Live Stripe sandbox is UNVERIFIED without credentials. Operations verification passes; final UI/release verification remains outstanding. The [historical audit](../mvp-audit/README.md) records the original baseline, not the current regression result.
+**Core MVP: IMPLEMENTED AND LOCALLY VERIFIED. Production rollout: UNVERIFIED.** The final suite passes 127 backend tests, 18 frontend tests, fourteen headed journeys and one built Compose journey. External Stripe sandbox, external SMTP/TLS, HTTPS/proxy deployment and the normal database upgrade remain separate operational checks. See [release readiness](RELEASE_READINESS.md); the original audit is preserved as historical evidence.
 
 | Record | Purpose |
 |---|---|

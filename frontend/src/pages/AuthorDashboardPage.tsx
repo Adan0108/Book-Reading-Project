@@ -1,249 +1,283 @@
-import type { Chapter } from '../type/book';
-import { useEffect, useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
-import { useBookStore } from '../store/useBookStore';
-import { useThemeStore } from '../store/useThemeStore';
-import { FiPlus, FiEdit, FiList, FiGlobe, FiLock, FiStar, FiBookOpen, FiLoader, FiEdit3, FiCheckCircle, FiSettings } from 'react-icons/fi';
-import Header from './HomePage/Header';
-import AuthorStats from '../features/author/AuthorStats';
-import { bookService } from '@/services/bookService';
-
-
-const ExpandedChapterList = ({ bookId }: { bookId: number }) =>{
-    const navigate = useNavigate();
-    const [chapters, setChapters] = useState<Chapter[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
-    const { isDark } = useThemeStore();
-
-    useEffect(() => {
-        const fetchChapters = async () => {
-            try {
-                const data = await bookService.getAuthorBookDetail(bookId);
-                const fetchedChapters = data.metadata?.chapters || data.chapters || [];
-                
-                const sortedChapters = fetchedChapters.sort((a: Chapter, b: Chapter) => a.index - b.index);
-                setChapters(sortedChapters);
-            } catch (error) {
-                console.error("Failed to load chapters for dashboard", error);
-            } finally {
-                setIsLoading(false);
-            }
-        };
-        fetchChapters();
-    }, [bookId]);
-
-    if (isLoading) return <div className="p-4 text-center text-yellow-500 flex justify-center"><FiLoader className="animate-spin text-2xl" /></div>;
-    
-    if (chapters.length === 0) return <div className="p-4 text-center text-gray-500 text-sm">Chưa có chương nào.</div>;
-
-    return (
-        <div className= {`${isDark ? 'bg-gray-950/50' : 'bg-gray-50 '}  h-full max-h-[18rem] overflow-y-auto`}>
-            {chapters.map((chapter) => (
-                <div key={chapter.id} className= {`flex flex-wrap items-center justify-between p-3 border-b ${isDark ? 'border-gray-800 hover:bg-gray-800/50' : 'border-gray-200  hover:bg-gray-100'}   transition-colors group`}>
-                    
-                    {/* Chapter Info */}
-                    <div className="flex flex-col">
-                        <span className="font-bold text-sm">Chương {chapter.index}: {chapter.title}</span>
-                        <div className="flex items-center gap-2 mt-1">
-                            {/* Status Badge */}
-                            {chapter.isDraft ? (
-                                <span className= {`flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full ${isDark ? 'bg-gray-700 text-gray-300' : 'bg-gray-200 text-gray-600'} font-bold`}>
-                                    <FiEdit3 /> BẢN NHÁP
-                                </span>
-                            ) : (
-                                <span className= {`flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full ${isDark ? 'text-green-400' : 'text-green-600'} bg-green-500/20 font-bold`}>
-                                    <FiCheckCircle /> ĐÃ XUẤT BẢN
-                                </span>
-                            )}
-                        </div>
-                    </div>
-
-                    {/* Setting Button */}
-                    <button 
-                        onClick={() => navigate(`/author/comic/${bookId}/chapter/${chapter.id}/edit`)}
-                        className= {`p-2 ${isDark ? 'bg-gray-900 border-gray-700' : 'bg-white border-gray-200'} border rounded-lg text-gray-500 hover:text-yellow-500 hover:border-yellow-500 transition-all shadow-sm `}
-                        title="Cài đặt / Sửa chương"
-                    >
-                        <FiSettings />
-                    </button>
+import { useState, type FormEvent } from "react";
+import { Link, useSearchParams } from "react-router-dom";
+import { useApiResource } from "../lib/useApiResource";
+import AuthorStats from "../features/author/AuthorStats";
+import AuthorNavigation from "../features/author/AuthorNavigation";
+interface OwnedBook {
+  id: number;
+  slug: string;
+  title: string;
+  coverUrl: string | null;
+  visibility: string;
+  status: string;
+  totalAllChapters: number;
+  totalPublishedChapters: number;
+}
+interface Chapter {
+  id: number;
+  index: number;
+  title: string;
+  isDraft: boolean;
+  scheduledAt: string | null;
+}
+function ChapterList({ bookId }: { bookId: number }) {
+  const resource = useApiResource<{ chapters: Chapter[] }>(
+    `/authors/me/books/${bookId}`,
+  );
+  return (
+    <section
+      aria-label="Book chapters"
+      className="mt-5 border-t border-base-300 pt-5"
+    >
+      {resource.loading ? (
+        <p role="status">Loading chapters…</p>
+      ) : resource.error ? (
+        <div role="alert">
+          <p>{resource.error}</p>
+          <button className="btn mt-3" onClick={resource.reload}>
+            Retry chapters
+          </button>
+        </div>
+      ) : resource.data?.chapters.length ? (
+        <ol className="space-y-3">
+          {[...resource.data.chapters]
+            .sort((a, b) => a.index - b.index)
+            .map((chapter) => (
+              <li
+                key={chapter.id}
+                className="flex flex-wrap justify-between items-center gap-3 rounded-lg bg-base-200 p-3"
+              >
+                <div className="min-w-0">
+                  <p className="font-medium">
+                    {chapter.index}. {chapter.title}
+                  </p>
+                  <p className="text-sm">
+                    {chapter.isDraft
+                      ? "Draft"
+                      : chapter.scheduledAt
+                        ? "Scheduled release"
+                        : "Published"}
+                  </p>
                 </div>
+                <Link
+                  className="btn btn-sm"
+                  to={`/author/comic/${bookId}/chapter/${chapter.id}/edit`}
+                >
+                  Edit chapter {chapter.index}
+                </Link>
+              </li>
             ))}
-        </div>
+        </ol>
+      ) : (
+        <p>No chapters yet. Start with a draft.</p>
+      )}
+    </section>
+  );
+}
+export default function AuthorDashboardPage() {
+  const [params, setParams] = useSearchParams(),
+    [expanded, setExpanded] = useState<number | null>(null),
+    [query, setQuery] = useState(params.get("query") ?? "");
+  const rawPage = Number(params.get("page") ?? 1),
+    page = Number.isSafeInteger(rawPage) && rawPage > 0 ? rawPage : 1,
+    status = params.get("status") ?? "";
+  const resource = useApiResource<{
+    items: OwnedBook[];
+    total: number;
+    page: number;
+    limit: number;
+  }>(
+    `/authors/me/books?${new URLSearchParams({ query: params.get("query") ?? "", status, page: String(page), limit: "12" })}`,
+  );
+  function update(values: Record<string, string>) {
+    const next = new URLSearchParams(params);
+    Object.entries(values).forEach(([key, value]) =>
+      value ? next.set(key, value) : next.delete(key),
     );
-}
-
-const AuthorDashboardPage = () => {
-    const navigate = useNavigate();
-    const [expandedBookId, setExpandedBookId] = useState<number | null>(null);
-    const { isDark } = useThemeStore();
-    const { authorBooks, isFetchingAuthorBooks, fetchAuthorBooksDashBoard } = useBookStore();
-
-    useEffect(() => {
-        fetchAuthorBooksDashBoard();
-    }, [fetchAuthorBooksDashBoard]);
-
-    const renderStatusBadge = (status: string) => {
-        switch (status) {
-            case 'PUBLISHED':
-                return <span className= {`px-2 py-1 bg-green-500/20 ${isDark ? 'text-green-400' : 'text-green-600'} text-xs font-bold rounded `}>ĐÃ XUẤT BẢN</span>;
-            case 'DRAFT':
-                return <span className= {`px-2 py-1 bg-yellow-500/20 ${isDark ? 'text-yellow-400' : 'text-yellow-600'} text-xs font-bold rounded `}>BẢN NHÁP</span>;
-            case 'HIDDEN':
-                return <span className= {`px-2 py-1 bg-red-500/20 ${isDark ? 'text-red-400' : 'text-red-600'} text-xs font-bold rounded `}>ĐÃ ẨN</span>;
-            default:
-                return null;
-        }
-    }
-
-    const renderVisibilityIcon = (visibility: string) => {
-        switch (visibility) {
-            case 'PUBLIC': return <span className="flex items-center gap-1"><FiGlobe /> Công khai</span>;
-            case 'MEMBERS': return <span className="flex items-center gap-1"><FiLock /> Thành viên</span>;
-            case 'TIERS': return <span className="flex items-center gap-1"><FiStar /> Trả phí</span>;
-            default: return null;
-        }
-    }
-
-    return (
-        <div className= {`min-h-screen pb-20 ${isDark ? 'bg-gray-950 text-gray-200' : 'bg-gray-50 text-gray-800'}`}>
-            <Header/>
-            <div className= 'container mx-auto px-4 max-w-6xl pt-10'>
-
-                {/* Dashboard Header */}
-                <nav className="flex flex-wrap gap-5 mb-6"><Link to="/author/memberships" className="link">Memberships</Link><Link to="/author/posts" className="link">Author posts</Link><Link to="/author/payments" className="link">Income</Link><Link to="/account/messages" className="link">Messages</Link><Link to="/author/profile" className="link">Public profile</Link></nav>
-                <AuthorStats/>
-                <div className= 'flex flex-col md:flex-row justify-between items-center mb-10 gap-4'>
-                    <div>
-                        <h1 className="text-4xl font-black flex items-center gap-3">
-                            <FiBookOpen className="text-yellow-500" /> Quản Lý Truyện
-                        </h1>
-
-                        <p className={`mt-2 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-                            Tất cả tác phẩm của bạn, bao gồm cả bản nháp và truyện đã ẩn.
-                        </p>
-
-                    </div>
-
-                    <button
-                        onClick={() => navigate('/author/comic/create')}
-                        className= 'px-6 py-3 bg-yellow-500 text-gray-900 font-bold rounded-xl hover:bg-yellow-400 transition flex items-center gap-2 shadow-lg hover:shadow-yellow-500/30 whitespace-nowrap'
-                    >
-                        <FiPlus className="text-xl" /> Tạo Truyện Mới
-                    </button>
-                </div>
-
-                {/* Loading State */}
-                {isFetchingAuthorBooks ? (
-                    <div className="flex justify-center py-20">
-                        <span className="animate-pulse text-xl font-bold text-yellow-500">Đang tải dữ liệu...</span>
-                    </div>
-                ) : authorBooks.length === 0 ? (
-                    
-                    /* Empty State */
-                    <div className= {`text-center py-20 rounded-2xl border ${isDark ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'}`}>
-                        <FiBookOpen className="text-6xl mx-auto mb-4 text-gray-400 opacity-50" />
-                        <h3 className="text-2xl font-bold mb-2">Bạn chưa có truyện nào!</h3>
-                        <p className="text-gray-500 mb-6">Hãy bắt đầu hành trình sáng tác của bạn ngay hôm nay.</p>
-                        <button onClick={() => navigate('/author/comic/create')} className="px-6 py-2 bg-yellow-500 text-black font-bold rounded-lg hover:bg-yellow-400">
-                            Tạo Truyện Mới
-                        </button>
-                    </div>
-
-                ) : (
-                    
-                    /* Book Grid */
-                    <div className="flex flex-col gap-6">
-                        {authorBooks.map((book) => (
-                            <div key={book.id} className={`flex flex-col rounded-2xl border transition-all hover:border-yellow-500 p-5 gap-5 ${isDark ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'}`}>
-                                
-                                {/* TOP SECTION: Cover | Details | Chapters */}
-                                <div className="flex flex-col lg:flex-row gap-6">
-                                    
-                                    {/* 1. Cover Image (Left) */}
-                                    <div className={`w-full sm:w-40 md:w-48 h-60 md:h-72 flex-shrink-0 rounded-xl overflow-hidden cursor-pointer ${isDark ? 'bg-gray-800' : 'bg-gray-200'}`} onClick={() => navigate(`/comic/${book.slug}`)}>
-                                        <img 
-                                            src={book.coverUrl || 'https://via.placeholder.com/150x200?text=No+Cover'} 
-                                            alt={book.title} 
-                                            className="w-full h-full object-cover hover:scale-105 transition duration-300"
-                                        />
-                                    </div>
-
-                                    {/* 2. Book Details (Middle) */}
-                                    <div className="flex flex-col flex-shrink-0 lg:w-64">
-                                        <div className="flex justify-between items-start mb-2">
-                                            <Link to={`/comic/${book.slug}`} className="text-xl font-bold hover:text-yellow-500 transition line-clamp-2">
-                                                {book.title}
-                                            </Link>
-                                        </div>
-                                        
-                                        <div className="flex flex-wrap gap-2 mb-3">
-                                            {renderStatusBadge(book.status ?? 'DRAFT')}
-                                            <span className={`px-2 py-1 text-xs font-bold rounded ${isDark ? 'bg-gray-800 text-gray-400' : 'bg-gray-200 text-gray-600'} `}>
-                                                {renderVisibilityIcon(book.visibility ?? 'PUBLIC')}
-                                            </span>
-                                        </div>
-
-                                        <div className="text-sm text-gray-500 mb-4 flex-grow">
-                                            <p>Tổng số chương: <strong className={isDark ? 'text-white' : 'text-black'}>{book.totalAllChapters || 0}</strong></p>
-                                            <p>Đã xuất bản: <strong className={isDark ? 'text-white' : 'text-black'}>{book.totalPublishedChapters || 0}</strong></p>
-                                        </div>
-                                    </div>
-
-                                    {/* 3. The Chapter Box (Right Area - Your Red Box!) */}
-                                    <div className="flex-grow">
-                                        {expandedBookId === book.id ? (
-                                            <div className= {`h-full border ${isDark ? 'border-gray-700' : 'border-gray-200'} rounded-xl overflow-hidden animate-fadeIn `}>
-                                                <ExpandedChapterList bookId={book.id} />
-                                            </div>
-                                        ) : (
-                                            /* Placeholder dashed box so the layout doesn't shrink when closed */
-                                            <div className= {`hidden lg:flex h-full border-2 border-dashed ${isDark ? 'border-gray-800' : 'border-gray-200'} rounded-xl items-center justify-center opacity-70 `}>
-                                                <p className="text-sm font-medium text-gray-400">Nhấn vào "Chương" để xem danh sách</p>
-                                            </div>
-                                        )}
-                                    </div>
-
-                                </div>
-
-                                {/* BOTTOM SECTION: Action Buttons (Full Width) */}
-                                <div className= {`flex gap-3 pt-5 border-t ${isDark ? 'border-gray-800' : 'border-gray-100'} `}>
-                                    <button 
-                                        onClick={() => setExpandedBookId(expandedBookId === book.id ? null : book.id)}
-                                        className={`flex-1 py-3 text-sm font-bold rounded-xl transition flex justify-center items-center gap-2 border
-                                            ${expandedBookId === book.id 
-                                                ? 'bg-yellow-500 text-black border-yellow-500 shadow-md' 
-                                                : isDark 
-                                                    ? 'border-gray-700 hover:bg-gray-800 bg-transparent' 
-                                                    : 'border-gray-200 hover:bg-gray-100 bg-transparent'   
-                                            }`}
-                                    >
-                                        <FiList /> {expandedBookId === book.id ? 'Chương' : 'Chương'}
-                                    </button>
-
-                                    <button 
-                                        onClick={() => navigate(`/author/comic/${book.id}/edit`)}
-                                        className={`flex-1 py-3 ${isDark ? 'bg-gray-800 hover:bg-gray-700' : 'bg-gray-100 hover:bg-gray-200'} text-sm font-bold rounded-xl transition flex justify-center items-center gap-2`}
-                                    >
-                                        <FiEdit /> Sửa
-                                    </button>
-                                    
-                                    <button 
-                                        onClick={() => navigate(`/author/comic/${book.id}/chapter/create`)}
-                                        className={`flex-1 py-3 ${isDark ? 'text-yellow-400 bg-yellow-500/10' : 'text-yellow-700 bg-yellow-50'} hover:bg-yellow-500 hover:text-black text-sm font-bold rounded-xl transition flex justify-center items-center gap-2`}
-                                    >
-                                        <FiPlus /> Thêm Chương
-                                    </button>
-                                </div>
-
-                            </div>
-                        ))}
-
-                    </div>
-                )}
-
-            </div>
+    setExpanded(null);
+    setParams(next);
+  }
+  function search(e: FormEvent) {
+    e.preventDefault();
+    update({ query: query.trim(), page: "1" });
+  }
+  return (
+    <main
+      id="main-content"
+      tabIndex={-1}
+      className="min-h-screen bg-base-200 px-4 py-8 md:py-12"
+    >
+      <div className="mx-auto max-w-6xl space-y-7">
+        <AuthorNavigation />
+        <div className="flex flex-wrap justify-between items-center gap-4">
+          <div>
+            <p className="text-sm font-semibold text-primary">
+              Writing workspace
+            </p>
+            <h1 className="text-3xl md:text-4xl font-bold">Your stories</h1>
+            <p className="mt-2">
+              Write chapters, shape your drafts, and choose when to publish.
+            </p>
+          </div>
+          <Link to="/author/comic/create" className="btn btn-primary">
+            Create a book
+          </Link>
         </div>
-    )
+        <AuthorStats />
+        <form
+          onSubmit={search}
+          role="search"
+          aria-label="Your story search"
+          className="card bg-base-100 p-5 flex-row flex-wrap items-end gap-4"
+        >
+          <label className="flex-1 min-w-44">
+            Search your stories
+            <input
+              className="input input-bordered w-full mt-1"
+              maxLength={100}
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+            />
+          </label>
+          <label>
+            Publication status
+            <select
+              aria-label="Publication status"
+              className="select select-bordered block mt-1"
+              value={status}
+              onChange={(e) => update({ status: e.target.value, page: "1" })}
+            >
+              <option value="">All stories</option>
+              <option value="DRAFT">Drafts</option>
+              <option value="PUBLISHED">Published</option>
+              <option value="HIDDEN">Hidden</option>
+            </select>
+          </label>
+          <button className="btn btn-primary">Search your stories</button>
+        </form>
+        {resource.loading ? (
+          <p role="status">Loading your stories…</p>
+        ) : resource.error ? (
+          <div role="alert" className="alert alert-error">
+            <p>{resource.error}</p>
+            <button className="btn" onClick={resource.reload}>
+              Retry stories
+            </button>
+          </div>
+        ) : (
+          <>
+            <p className="text-sm">
+              {resource.data?.total ?? 0} matching stories
+            </p>
+            {!resource.data?.items.length ? (
+              <section className="card bg-base-100 p-8">
+                <h2 className="text-xl font-semibold">
+                  {params.get("query") || status
+                    ? "No stories match these filters."
+                    : "Your next story starts here."}
+                </h2>
+                <p className="mt-2">
+                  {params.get("query") || status
+                    ? "Try another search or publication status."
+                    : "Create a book, then start a text chapter. Illustrations are always optional."}
+                </p>
+              </section>
+            ) : (
+              resource.data.items.map((book) => (
+                <article key={book.id} className="card bg-base-100 p-5 sm:p-6">
+                  <div className="flex items-start gap-5">
+                    {book.coverUrl && (
+                      <img
+                        src={book.coverUrl}
+                        alt=""
+                        loading="lazy"
+                        decoding="async"
+                        className="hidden sm:block w-20 h-28 object-cover rounded-md"
+                      />
+                    )}
+                    <div className="min-w-0 flex-1">
+                      <h2 className="text-xl font-bold">{book.title}</h2>
+                      <p className="mt-2">
+                        {book.status === "DRAFT"
+                          ? "Draft"
+                          : book.status === "HIDDEN"
+                            ? "Hidden"
+                            : "Published"}{" "}
+                        ·{" "}
+                        {book.visibility === "PUBLIC"
+                          ? "Public"
+                          : book.visibility === "MEMBERS"
+                            ? "Members"
+                            : "Required tier"}
+                      </p>
+                      <p className="text-sm mt-2">
+                        {book.totalAllChapters} chapters ·{" "}
+                        {book.totalPublishedChapters} published
+                      </p>
+                      <div className="flex flex-wrap gap-2 mt-4">
+                        <Link
+                          className="btn btn-sm btn-primary"
+                          to={`/author/comic/${book.id}/chapter/create`}
+                        >
+                          Write a chapter
+                        </Link>
+                        <Link
+                          className="btn btn-sm"
+                          to={`/author/comic/${book.id}/edit`}
+                        >
+                          Edit book
+                        </Link>
+                        <button
+                          className="btn btn-sm"
+                          aria-expanded={expanded === book.id}
+                          onClick={() =>
+                            setExpanded(expanded === book.id ? null : book.id)
+                          }
+                        >
+                          Chapters
+                        </button>
+                        {book.status === "PUBLISHED" && (
+                          <Link
+                            className="btn btn-sm btn-ghost"
+                            to={`/comic/${book.slug}`}
+                          >
+                            Reader preview
+                          </Link>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  {expanded === book.id && <ChapterList bookId={book.id} />}
+                </article>
+              ))
+            )}
+            {resource.data && resource.data.total > 12 && (
+              <nav
+                aria-label="Your story pages"
+                className="flex flex-wrap items-center gap-3"
+              >
+                <button
+                  className="btn"
+                  disabled={page <= 1}
+                  onClick={() => update({ page: String(page - 1) })}
+                >
+                  Previous page
+                </button>
+                <span>
+                  Page {page} of {Math.ceil(resource.data.total / 12)}
+                </span>
+                <button
+                  className="btn"
+                  disabled={page * 12 >= resource.data.total}
+                  onClick={() => update({ page: String(page + 1) })}
+                >
+                  Next page
+                </button>
+              </nav>
+            )}
+          </>
+        )}
+      </div>
+    </main>
+  );
 }
-
-export default AuthorDashboardPage

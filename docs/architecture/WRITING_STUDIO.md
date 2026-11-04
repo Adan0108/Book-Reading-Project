@@ -1,6 +1,6 @@
 # Text-first writing studio
 
-Implementation branch: `feat/light-novel-editor`, based on merged authentication `4e602cd`. This phase is under verification; see [current progress](../mvp/IMPLEMENTATION_PROGRESS.md).
+Implementation branch: `feat/light-novel-editor`, based on merged authentication `4e602cd`. Merged as `d326c94`, merge `30fef17`; see [current progress](../mvp/IMPLEMENTATION_PROGRESS.md).
 
 ## Editing engine decision
 
@@ -32,8 +32,11 @@ Navigation protection covers unsaved edits and active saves. Text/files are not 
 
 Structured content renders with a small React renderer, not the editing engine or raw HTML. Images are resolved only through the server-returned asset map. Legacy Markdown continues to use the existing safe Markdown renderer. Shared prose styling establishes readable width, paragraph/heading/scene spacing and quote/note presentation.
 
-The reader uses actual released chapter headers for previous/next navigation, rather than guessing numeric adjacency. Font size and light/dark preferences stay locally in the browser. Approximate scroll progress is retained for at most fifty chapters; no chapter body is stored. Progress can shift while late-loading images change page height. Paid access remains server-enforced; complete entitlement consolidation belongs to the membership phase.
+The reader uses actual released chapter headers for previous/next navigation, rather than guessing numeric adjacency. Font size and light/dark preferences stay locally in the browser. Approximate scroll progress is retained for at most fifty chapters; no chapter body is stored. Progress can shift while late-loading images change page height. Paid access remains server-enforced; the shared membership service now enforces the parent and child rules; see [membership design](MEMBERSHIPS.md).
 
 ## Migration and rollback
 
 Apply `20261104_0004_chapter_documents.sql` after backup/review. Only the isolated QA schema has been migrated. There is no destructive conversion or schema rollback. Older application code cannot render new structured chapters fully, so rollback must preserve the new reader/compatibility support or prevent publication of structured content. Keeping the legacy column does not reconstruct new structured text as Markdown.
+
+
+The distributed frontend includes editor source attribution at /third-party-notices.txt and a verbatim MPL-2.0 copy under /licenses/. Upstream source is pinned to the installed package’s published gitHead; the library source is not modified.

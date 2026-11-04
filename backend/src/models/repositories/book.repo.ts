@@ -272,7 +272,7 @@ export const listMyBooksForAuthor = async (params: {
             ) AS totalPublishedChapters
      FROM books b
      WHERE ${where.join(' AND ')}
-     ORDER BY b.updated_at DESC
+     ORDER BY b.updated_at DESC,b.id DESC
      LIMIT ? OFFSET ?`,
     [...binds, limit, offset],
   );

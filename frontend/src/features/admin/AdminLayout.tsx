@@ -8,7 +8,11 @@ export default function AdminLayout({
   children: ReactNode;
 }) {
   return (
-    <main className="min-h-screen bg-base-200 p-4 md:p-8">
+    <main
+      id="main-content"
+      tabIndex={-1}
+      className="min-h-screen bg-base-200 p-4 md:p-8"
+    >
       <div className="mx-auto max-w-6xl space-y-6">
         <Link to="/">← HiBook</Link>
         <h1 className="text-3xl font-bold">{title}</h1>
