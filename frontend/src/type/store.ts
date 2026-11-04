@@ -1,5 +1,5 @@
 export interface AuthState {
-    authUser: { id?: number, email: string, username?: string } | null;
+    authUser: { id?: number, email: string, username?: string, roles?: string[]; } | null;
     accessToken: string | null;
     isSigningUp: boolean;
     isLoggingIn: boolean;
@@ -26,4 +26,10 @@ export interface AuthState {
     resendPasswordReset: () => Promise<void>;
     refreshToken: () => Promise<void>;
     fetchMe: () => Promise<void>;
+}
+
+export interface ThemeState {
+    isDark: boolean;
+    toggleTheme: () => void;
+    setTheme: (dark: boolean) => void; 
 }

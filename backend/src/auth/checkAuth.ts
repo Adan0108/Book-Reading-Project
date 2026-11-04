@@ -112,6 +112,7 @@ export const authenticationV2 = asyncHandler(async (req, _res, next) => {
     if (err?.name === "TokenExpiredError") {
       throw new AuthFailureError("Access token expired"); // client should call /refresh
     }
+    if (err?.name === 'JsonWebTokenError' || err?.name === 'NotBeforeError') throw new AuthFailureError('Invalid access token');
     throw err;
   }
 });

@@ -5,6 +5,7 @@ import booksRouter from './books';
 import authorMeBooksRouter from './authors/me/books';
 import authorApplicationsRouter from "./authorApplications";
 import adminAuthorApplicationsRouter from "./admin/authorApplications";
+import uploadRouter from "./upload";
 
 const router = Router();
 
@@ -18,5 +19,7 @@ router.use('/v1/api/authors/me/books', authorMeBooksRouter);
 
 router.use("/v1/api/author-applications", authorApplicationsRouter);
 router.use("/v1/api/admin/author-applications", adminAuthorApplicationsRouter);
+
+router.use("/v1/api", uploadRouter);
 
 export default router;

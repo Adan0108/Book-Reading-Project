@@ -1,77 +1,286 @@
-import React from 'react'
-import { FiSearch, FiMenu } from 'react-icons/fi'
-import { FaFire } from "react-icons/fa";
+import { useState, useEffect, useRef } from 'react';
+import { FiSearch, FiMenu, FiSun, FiMoon, FiLoader, FiUser, FiSettings, FiLogOut, FiBookOpen } from 'react-icons/fi';
 import { useNavigate } from 'react-router-dom';
 import type { AuthState } from '../../type/store';
 import { useAuthStore } from '../../store/useAuthStore';
+import { useThemeStore } from '@/store/useThemeStore';
+import { bookService } from '../../services/bookService'; // <-- Import your service
+import type { Book } from '../../type/book';
 
 interface HeaderProps {
-  onStartTour: () => void; // A function that returns nothing
+  onStartTour: () => void;
 }
 
-const Header = ({ onStartTour }: HeaderProps) => {
+// 1. Extracted SearchBar component to reuse for both Desktop and Mobile
+const SearchBar = ({ isDark }: { isDark: boolean }) => {
+  const [query, setQuery] = useState('');
+  const [results, setResults] = useState<Book[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [showDropdown, setShowDropdown] = useState(false);
+  
+  const wrapperRef = useRef<HTMLDivElement>(null);
+  const navigate = useNavigate();
 
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (wrapperRef.current && !wrapperRef.current.contains(event.target as Node)) {
+        setShowDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // Debounced API Call
+  useEffect(() => {
+    const delayDebounceFn = setTimeout(async () => {
+      if (query.trim()) {
+        setIsSearching(true);
+        try {
+          const response = await bookService.getBooks({ query, limit: 1000 });
+          const fetchedBooks = response.metadata?.items || [];
+
+          const sortedBooks = fetchedBooks.sort((a: Book, b: Book) => {
+            const searchLower = query.toLowerCase();
+            const aTitle = a.title.toLowerCase();
+            const bTitle = b.title.toLowerCase();
+            
+            // Give priority to comics that actually START with the search term
+            const aStarts = aTitle.startsWith(searchLower);
+            const bStarts = bTitle.startsWith(searchLower);
+            
+            if (aStarts && !bStarts) return -1;
+            if (!aStarts && bStarts) return 1;
+            
+            // Sort remaining matches numerically (so 1 comes before 11, and 11 before 100)
+            return aTitle.localeCompare(bTitle, undefined, { numeric: true, sensitivity: 'base' });
+          });
+
+          setResults(sortedBooks);
+          setShowDropdown(true);
+          
+        } catch (error) {
+          console.error("Search error:", error);
+        } finally {
+          setIsSearching(false);
+        }
+      } else {
+        setResults([]);
+        setShowDropdown(false);
+      }
+    }, 500);
+
+    return () => clearTimeout(delayDebounceFn);
+  }, [query]);
+
+  return (
+    <div ref={wrapperRef} className="relative w-full">
+      <input
+        type="text"
+        placeholder="Tìm truyện..."
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+        onFocus={() => { if (query.trim()) setShowDropdown(true); }}
+        className={`w-full py-2 px-4 pr-10 rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-yellow-500
+          ${isDark 
+              ? "bg-gray-800/80 text-white placeholder-gray-400" 
+              : "bg-gray-200 text-gray-900 placeholder-gray-500"
+          }`}
+      />
+      <button className="absolute right-0 top-0 mt-2.5 mr-4">
+        {isSearching ? (
+           <FiLoader className={`animate-spin ${isDark ? "text-gray-400" : "text-gray-500"}`} />
+        ) : (
+           <FiSearch className={isDark ? "text-gray-400 text-lg" : "text-gray-500 text-lg"} />
+        )}
+      </button>
+
+      {/* Live Search Dropdown */}
+      {showDropdown && results.length > 0 && (
+        <div className={`absolute top-full left-0 right-0 mt-2 rounded-lg shadow-lg z-50 border max-h-[300px] overflow-y-auto overflow-x-hidden
+          ${isDark ? "bg-gray-800 border-gray-700 text-white" : "bg-white border-gray-200 text-gray-900"}`}
+        >
+          {results.map((book) => (
+            <div 
+              key={book.id}
+              onClick={() => {
+                setShowDropdown(false);
+                setQuery('');
+                navigate(`/comic/${book.slug}`);
+              }}
+              className={`flex items-center gap-3 p-3 cursor-pointer transition-colors
+                ${isDark ? "hover:bg-gray-700" : "hover:bg-gray-100"}`}
+            >
+              <img 
+                src={book.coverUrl || 'https://stock.adobe.com/search?k=no+image+available'} 
+                alt={book.title} 
+                className="w-10 h-14 object-cover rounded" 
+              />
+
+              <div className="flex flex-col flex-1 min-w-0">
+                <span className="font-semibold truncate">{book.title}</span>
+                <span className={`text-xs ${isDark ? "text-gray-400" : "text-gray-500"}`}>
+                  {book.authorName} • {book.totalChapters} Chương
+                </span>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+      
+      {/* Empty State for Dropdown */}
+      {showDropdown && query.trim() && results.length === 0 && !isSearching && (
+        <div className={`absolute top-full left-0 right-0 mt-2 p-4 text-center rounded-lg shadow-lg z-50 border
+          ${isDark ? "bg-gray-800 border-gray-700 text-gray-400" : "bg-white border-gray-200 text-gray-500"}`}
+        >
+          Không tìm thấy truyện nào.
+        </div>
+      )}
+    </div>
+  );
+};
+
+const Header = ({ onStartTour }: HeaderProps) => {
   const navigate = useNavigate();
   const logout = useAuthStore((state: AuthState) => state.logout);
   const authUser = useAuthStore((state: AuthState) => state.authUser);
+  const { isDark, toggleTheme } = useThemeStore();
+
+  const [showUserMenu, setShowUserMenu] = useState(false);
+  const userMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
+        setShowUserMenu(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const headerBaseClass = "sticky top-0 z-50 transition-all duration-300 backdrop-blur-md shadow-sm border-b";
+  const themeClass = isDark 
+    ? "bg-blue-950/75 border-white/10 text-white"   
+    : "bg-white/75 border-gray-200/50 text-gray-900"; 
 
   return (
-    <header className = "sticky top-0 z-50 bg-orange-900 dark:bg-gray-950 text-white shadow-md">
-      <div className = "container mx-auto max-w-7xl px-4 py-3 flex items-center justify-between">
+    <header className={`${headerBaseClass} ${themeClass}`}>
+      <div className="container mx-auto max-w-7xl px-4 py-3 flex items-center justify-between">
 
         {/* Logo Section */}
         <div className="flex items-center gap-10">
-          {/* Logo */}
           <a href="/" className="flex-shrink-0">
             <img
-              className="h-20 w-auto"
+              className={`h-20 w-auto transition-all ${isDark ? 'brightness-0 invert' : ''}`}
               src="/Name.svg" 
-              alt="MANGA-SITE Logo"
+              alt="MeoMic Logo"
             />
           </a>
 
-          {/* Start Tour Button */}
           <button
             onClick={onStartTour}
-            className="bg-yellow-500 text-gray-900 px-3 py-1 rounded-md text-sm font-medium hover:bg-yellow-400"
+            className="bg-yellow-500 text-gray-900 px-3 py-1 rounded-md text-sm font-bold hover:bg-yellow-400 shadow-sm transition-transform active:scale-95"
           >
             Start Tour
           </button>
         </div>
 
-        {/* Search Bar */}
-        <div className = "hidden md:flex relative w-full max-w-lg mx-4">
-          <input
-            id = "tour-search-bar"
-            type="text"
-            placeholder="Tìm truyện..."
-            className="w-full py-2 px-4 rounded-full bg-gray-700 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-yellow-500"
-          />
-          <button className ="absolute right-0 top-0 mt-3 mr-3">
-            <FiSearch className ="text-gray-400" />
-          </button>
+        {/* Desktop Search Bar */}
+        <div className="hidden md:flex relative w-full max-w-lg mx-4">
+          <SearchBar isDark={isDark} />
         </div>
 
         {/* Navigation & Auth */}
-        <nav className ="flex items-center gap-4">
-          <a href="#" className="hidden md:block hover:text-yellow-400">Nổi bật </a>
-          <a href="#" className="hidden md:block hover:text-yellow-400">Mới nhất</a>
-          <a href="#" className="hidden md:block hover:text-yellow-400">Thể loại</a>
+        <nav className="flex items-center gap-4 font-medium">
+          <a href="#" className={`hidden md:block transition-colors ${isDark ? "hover:text-yellow-400" : "hover:text-yellow-600"}`}>Nổi bật</a>
+          <a href="#" className={`hidden md:block transition-colors ${isDark ? "hover:text-yellow-400" : "hover:text-yellow-600"}`}>Mới nhất</a>
+          <a href="#" className={`hidden md:block transition-colors ${isDark ? "hover:text-yellow-400" : "hover:text-yellow-600"}`}>Thể loại</a>
+
+          <button
+            onClick={toggleTheme}
+            className={`p-2 rounded-full transition-colors text-xl ${isDark ? "hover:bg-white/10" : "hover:bg-gray-200/50"}`}
+            title={isDark ? "Switch to Light Mode" : "Switch to Dark Mode"}
+          >
+            {isDark ? <FiSun className="text-yellow-400" /> : <FiMoon />}
+          </button>
           
-          {authUser ? (
-            <div className="flex items-center gap-3">
-              <span className="text-sm font-medium text-white">
-                Hi, {authUser.username || (authUser.email ? authUser.email.split('@')[0] : 'User')}
-              </span>
-              <button onClick={() => logout()} className="bg-red-600 text-white px-3 py-1 rounded-md text-sm font-medium hover:bg-red-500">
-                Logout
+          {/* 3. The New User Menu Dropdown */}
+          <div className= 'relative' ref= {userMenuRef}>
+            {authUser ? (
+              // Logged In: Show Avatar
+              <button
+                onClick={() => setShowUserMenu(!showUserMenu)}
+                className= {`flex items-center justify-center w-9 h-9 rounded-full bg-yellow-500 text-gray-900 font-bold hover:ring-2 hover:ring-yellow-400 transition-all shadow-sm`}
+              >
+                {(authUser.username || authUser.email || 'U')[0].toUpperCase()}
               </button>
-            </div>
-          ) : (
-            <button onClick={() => navigate('/login')} className="bg-yellow-500 text-gray-900 px-3 py-1 rounded-md text-sm font-medium hover:bg-yellow-400">
-              Sign In
-            </button>
-          )}
+            ) : (
+              // Logged Out: Show User Icon
+              <button
+                onClick= {() => setShowUserMenu(!showUserMenu)}
+                className= {`p-2 rounded-full transition-colors text-xl ${isDark ? "hover:bg-white/10" : "hover:bg-gray-200/50"}`}
+              >
+                <FiUser />
+              </button>
+            )}
+
+            {/* The Dropdown Panel */}
+            {showUserMenu && (
+              <div className={`absolute right-0 mt-3 w-56 rounded-xl shadow-xl overflow-hidden z-50 border
+                ${isDark ? 'bg-gray-900 border-gray-700 text-white' : 'bg-white border-gray-200 text-gray-900'}`}
+              >
+
+                {authUser ? (
+                  <>
+
+                    <div className= {`p-4 border-b ${isDark ? 'border-gray-800' : 'border-gray-100'}`}>
+                      <p className= "font-bold truncate">{authUser.username || authUser.email}</p>
+                      <p className= {`text-xs mt-1 truncate ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                        {authUser.email}
+                      </p>
+                    </div>
+
+                    <div className="p-2">
+                      <button onClick={() => { setShowUserMenu(false); navigate('/profile'); }} className={`w-full text-left px-3 py-2 text-sm rounded-lg flex items-center gap-3 transition-colors ${isDark ? 'hover:bg-gray-800' : 'hover:bg-gray-100'}`}>
+                        <FiUser className="text-gray-400" /> Hồ sơ của tôi
+                      </button>
+                      <button onClick={() => { setShowUserMenu(false); navigate('/author/dashboard'); }} className={`w-full text-left px-3 py-2 text-sm rounded-lg flex items-center gap-3 transition-colors ${isDark ? 'hover:bg-gray-800' : 'hover:bg-gray-100'}`}>
+                        <FiBookOpen className="text-gray-400" /> Quản lý truyện
+                      </button>
+                      <button onClick={() => { setShowUserMenu(false); navigate('/settings'); }} className={`w-full text-left px-3 py-2 text-sm rounded-lg flex items-center gap-3 transition-colors ${isDark ? 'hover:bg-gray-800' : 'hover:bg-gray-100'}`}>
+                        <FiSettings className="text-gray-400" /> Cài đặt
+                      </button>
+                    </div>
+
+                    <div className={`p-2 border-t ${isDark ? 'border-gray-800' : 'border-gray-100'}`}>
+                      <button onClick={() => { setShowUserMenu(false); logout(); }} className="w-full text-left px-3 py-2 text-sm text-red-500 rounded-lg flex items-center gap-3 transition-colors hover:bg-red-50 dark:hover:bg-red-500/10">
+                        <FiLogOut /> Đăng xuất
+                      </button>
+                    </div>
+
+                  </>
+                ) : (
+                  <div className= 'p-3'>
+                    
+                    <p className={`text-sm mb-3 text-center ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                      Đăng nhập để lưu truyện và bình luận
+                    </p>
+
+                    <button onClick={() => { setShowUserMenu(false); navigate('/login'); }} className="w-full text-center px-4 py-2 mb-2 bg-yellow-500 text-gray-900 font-bold rounded-lg hover:bg-yellow-400 transition-colors">
+                      Đăng Nhập
+                    </button>
+
+                    <button onClick={() => { setShowUserMenu(false); navigate('/register'); }} className={`w-full text-center px-4 py-2 text-sm font-medium rounded-lg transition-colors ${isDark ? 'bg-gray-800 hover:bg-gray-700' : 'bg-gray-100 hover:bg-gray-200'}`}>
+                      Đăng Ký
+                    </button>
+
+                  </div>
+                )}
+
+              </div>
+            )}
+          </div>
 
           <button className="md:hidden text-2xl">
             <FiMenu />
@@ -79,21 +288,12 @@ const Header = ({ onStartTour }: HeaderProps) => {
         </nav>
       </div>
 
-      {/* Mobile Search Bar - Shown only on small screens */}
-      <div className = "md:hidden px-4 pb-3">
-        <div className = "relative w-full">
-          <input
-            type="text"
-            placeholder="Search comics..."
-            className="w-full py-2 px-4 rounded-full bg-gray-700 text-white placeholder-gray-400 focus:outline-none"
-          />
-          <button className="absolute right-0 top-0 mt-3 mr-3">
-            <FiSearch className="text-gray-400" />
-          </button>
-        </div>
+      {/* Mobile Search Bar */}
+      <div className="md:hidden px-4 pb-3">
+        <SearchBar isDark={isDark} />
       </div>
     </header>
-  )
-}
+  );
+};
 
-export default Header
+export default Header;

@@ -1,4 +1,5 @@
-import React, {useState} from 'react'
+import { useThemeStore } from '@/store/useThemeStore';
+import { useState } from 'react'
 
 type TabType = 'daily' | 'weekly' | 'monthly'
 
@@ -10,64 +11,117 @@ const genres = [
 ];
 
 const Sidebar = () => {
-
   const [activeTab, setActiveTab] = useState<TabType>('daily');
+  const { isDark } = useThemeStore();
 
   return (
-    <div className = "sticky top-25 space-y-6">
+    <div className="sticky top-4 space-y-6">
+      
+      {/* 1. New Animation Styles: Slide in from the left, one by one */}
+      <style>{`
+        @keyframes slideIn {
+          from {
+            opacity: 0;
+            transform: translateX(-10px); /* Start slightly to the left */
+          }
+          to {
+            opacity: 1;
+            transform: translateX(0);
+          }
+        }
+        .animate-stagger {
+          /* Start invisible (opacity-0) so we don't see them before animation starts */
+          opacity: 0; 
+          animation: slideIn 0.5s ease-out forwards;
+        }
+      `}</style>
+
       {/* Top Comics Module */}
-      <div className = "bg-white dark:bg-gray-800 rounded-lg shadow-md p-4">
-        <h3 className="text-xl font-bold mb-4">Top Comics</h3>
+      <div className= {`${isDark ? 'dark:bg-gray-800 dark:border-gray-700' : 'bg-white border-gray-200'} rounded-lg shadow-sm border overflow-hidden `}>
+        
+        {/* Header */}
+        <div className= {`p-4 border-b ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
+          <h3 className= {`text-lg font-bold ${isDark ? 'text-white' : 'text-gray-800'}   uppercase flex items-center gap-2`}>
+            <span className="text-yellow-500">★</span> Top Theo Dõi
+          </h3>
+        </div>
 
         {/* Tabs */}
-        <div id = "tour-top-comics" className = "flex border-b mb-4">
+        <div className= {`flex text-sm font-medium ${isDark ? 'bg-gray-700' : 'bg-gray-50'}`}>
           <button
             onClick={() => setActiveTab('daily')}
-            className={`py-2 px-4 font-medium ml-4 ${
+            className={`flex-1 py-2 text-center transition-colors ${
               activeTab === 'daily'
-                ? 'text-yellow-500 border-b-2 border-yellow-500' // Active style
-                : 'text-gray-500 dark:text-gray-400 hover:text-yellow-500' // Inactive style
+                  ? `text-yellow-600 border-t-2 border-yellow-500 font-bold ${isDark ? 'bg-gray-800' : 'bg-white'}`
+                  : isDark 
+                      ? 'text-gray-400 hover:text-gray-300' 
+                      : 'text-gray-500 hover:text-gray-700'
             }`}
           >
-            Mỗi Ngày
+            Ngày
           </button>
-
           <button
             onClick={() => setActiveTab('weekly')}
-            className={`py-2 px-4 font-medium ml-4 ${
+            className={`flex-1 py-2 text-center transition-colors ${
               activeTab === 'weekly'
-                ? 'text-yellow-500 border-b-2 border-yellow-500' // Active style
-                : 'text-gray-500 dark:text-gray-400 hover:text-yellow-500' // Inactive style
+                  ? `text-yellow-600 border-t-2 border-yellow-500 font-bold ${isDark ? 'bg-gray-800' : 'bg-white'}`
+                  : isDark 
+                      ? 'text-gray-400 hover:text-gray-300' 
+                      : 'text-gray-500 hover:text-gray-700'
             }`}
           >
-            Mỗi Tuần
+            Tuần
           </button>
-
           <button
             onClick={() => setActiveTab('monthly')}
-            className={`py-2 px-4 font-medium ml-4 ${
+            className={`flex-1 py-2 text-center transition-colors ${
               activeTab === 'monthly'
-                ? 'text-yellow-500 border-b-2 border-yellow-500' // Active style
-                : 'text-gray-500 dark:text-gray-400 hover:text-yellow-500' // Inactive style
+                  ? `text-yellow-600 border-t-2 border-yellow-500 font-bold ${isDark ? 'bg-gray-800' : 'bg-white'}`
+                  : isDark 
+                      ? 'text-gray-400 hover:text-gray-300' 
+                      : 'text-gray-500 hover:text-gray-700'
             }`}
           >
-            Mỗi Tháng
+            Tháng
           </button>
-
         </div>
 
         {/* Top Comics List */}
-        <ul className="space-y-3">
+        {/* We keep key={activeTab} on the UL to reset the list when tab changes */}
+        <ul key={activeTab} className= {`divide-y ${isDark ? 'divide-gray-700' : 'divide-gray-200'}`}>
           {topComicsData[activeTab].map((comic, index) => (
-            <li key={comic.id} className="flex items-center gap-3">
-              <span className={`text-2xl font-bold w-6 text-center ${
-                index === 0 ? 'text-red-500' : (index === 1 ? 'text-blue-500' : (index === 2 ? 'text-green-500' : 'text-gray-500'))
+            <li 
+              key={comic.id} 
+              // 2. Add 'animate-stagger' class
+              className= {`flex items-start gap-3 p-3 ${isDark ? 'hover:bg-gray-700/50' : 'hover:bg-gray-50'} transition-colors cursor-pointer group animate-stagger`}
+              // 3. Dynamic Delay: Index * 100ms (0ms, 100ms, 200ms, etc.)
+              style={{ animationDelay: `${index * 100}ms` }}
+            >
+              
+              {/* Rank Number */}
+              <div className={`text-xl font-bold w-6 text-center leading-none mt-1 ${
+                index === 0 ? 'text-red-500' : (index === 1 ? 'text-green-500' : (index === 2 ? 'text-blue-500' : 'text-gray-400'))
               }`}>
                 {index + 1}
-              </span>
-              <div>
-                <a href="#" className="font-medium hover:text-yellow-400">{comic.title}</a>
-                <p className="text-sm text-gray-500 dark:text-gray-400">Chap {comic.chapter} • {comic.views} views</p>
+              </div>
+
+              {/* Thumbnail */}
+              <div className="w-12 h-16 flex-shrink-0 rounded overflow-hidden shadow-sm relative">
+                <img src={comic.imageUrl} alt={comic.title} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300" />
+              </div>
+
+              {/* Info */}
+              <div className="flex-1 min-w-0">
+                <a href="#" className= {`block text-sm font-bold ${isDark ? 'text-gray-200' : 'text-gray-800'}  truncate group-hover:text-yellow-500 mb-1 transition-colors`}>
+                  {comic.title}
+                </a>
+                <div className="flex items-center justify-between text-xs text-gray-500">
+                  <span>Chap {comic.chapter}</span>
+                  <span className="flex items-center gap-1">
+                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
+                    {comic.views}
+                  </span>
+                </div>
               </div>
             </li>
           ))}
@@ -75,14 +129,14 @@ const Sidebar = () => {
       </div>
 
       {/* Genres Module */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-4">
-        <h3 className="text-xl font-bold mb-4">Genres</h3>
+      <div className= {`${isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} rounded-lg shadow-sm border p-4`}>
+        <h3 className= {`text-lg font-bold mb-4 ${isDark ? 'text-white' : 'text-gray-800'} border-l-4 border-yellow-500 pl-2`}>Thể Loại</h3>
         <div className="flex flex-wrap gap-2">
           {genres.map((genre) => (
             <a
               key={genre}
               href="#"
-              className="bg-gray-200 dark:bg-gray-700 text-sm px-3 py-1 rounded-full hover:bg-yellow-500 hover:text-gray-900"
+              className={`${isDark ? 'bg-gray-700 text-gray-300' : 'bg-gray-100 text-gray-600'} text-xs px-3 py-1.5 rounded hover:bg-yellow-500 hover:text-white transition-colors`}
             >
               {genre}
             </a>
@@ -93,42 +147,34 @@ const Sidebar = () => {
   )
 }
 
+// --- Helper Functions ---
+
 function formatViews(views: number): string {
-  if (views >= 1000000) {
-    // Round to one decimal place for millions
-    return (views / 1000000).toFixed(1) + 'M';
-  }
-  if (views >= 1000) {
-    // Round down for thousands
-    return Math.floor(views / 1000) + 'K';
-  }
+  if (views >= 1000000) return (views / 1000000).toFixed(1) + 'M';
+  if (views >= 1000) return Math.floor(views / 1000) + 'K';
   return views.toString();
 }
 
-function generateTopList(count: number, idStart: number): any[] {
+function generateTopList(count: number, idStart: number) {
   const list = [];
   for (let i = 0; i < count; i++) {
     const id = idStart + i;
     list.push({
       id: id,
-      title: `Truyện ${id}`, // Matches your "Truyện 1", "Truyện 2" pattern
-      chapter: `${Math.floor(Math.random() * 250) + 10}`, // Random chapter
-      views: formatViews(Math.floor(Math.random() * 20000000) + 100000), // Random views
+      title: `Võ Luyện Đỉnh Phong ${id}`, 
+      chapter: `${Math.floor(Math.random() * 500) + 1}`,
+      views: formatViews(Math.floor(Math.random() * 20000000) + 100000),
+      imageUrl: `https://img.buzzfeed.com/buzzfeed-static/static/2022-03/30/23/asset/c14c01274175/sub-buzz-532-1648681737-1.jpg?downsize=700%3A%2A&output-quality=auto&output-format=auto`, 
     });
   }
   return list;
 }
 
 function generateTopComicsData() {
-  // Generate 3 items for each list, ensuring IDs are unique
-  const daily = generateTopList(3, 1);   // IDs 1, 2, 3
-  const weekly = generateTopList(3, 4);  // IDs 4, 5, 6
-  const monthly = generateTopList(3, 7); // IDs 7, 8, 9
-
   return {
-    daily,
-    weekly,
-    monthly,
+    daily: generateTopList(5, 1),
+    weekly: generateTopList(5, 10),
+    monthly: generateTopList(5, 20),
   };
 }
 

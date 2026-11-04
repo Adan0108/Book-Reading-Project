@@ -1,3 +1,5 @@
+import { randomUUID } from 'crypto';
+import { savePublication, getChapterImages } from './publishing.service';
 import { BadRequestError, ForbiddenError, NotFoundError, AuthFailureError } from '../core/error.response';
 import * as bookRepo from '../models/repositories/book.repo';
 import * as chapterRepo from '../models/repositories/chapter.repo';
@@ -149,7 +151,7 @@ export const getChapterContent = async (slug: string, chapterIndex: number, view
   if (!chapter) throw new NotFoundError('Chapter not found');
 
   // Only published chapters for Reader endpoints
-  if (chapter.is_draft === 1 || !chapter.published_at) {
+  if (chapter.is_draft === 1 || !chapter.published_at || !chapter.release_ready) {
     throw new NotFoundError('Chapter not available');
   }
   console.log("UserId: " , viewerUserId)
@@ -181,6 +183,7 @@ export const getChapterContent = async (slug: string, chapterIndex: number, view
     index: chapter.chapter_no,
     title: chapter.title,
     contentMarkdown: chapter.content_md,
+    images: await getChapterImages(chapter.id),
     visibility: chapter.visibility,
     releaseAt: chapter.published_at,
     isDraft: Boolean(chapter.is_draft),
@@ -192,163 +195,15 @@ export const getChapterContent = async (slug: string, chapterIndex: number, view
   return payload;
 };
 
-export const authorCreateBook = async (userId: number, body: any) => {
-  const author = await authorRepo.findAuthorByUserId(userId);
-  if (!author) throw new ForbiddenError("User is not an author");
-
-  const title = String(body.title ?? "").trim();
-  const genre = String(body.genre ?? "").trim();
-  if (!title) throw new BadRequestError("title is required");
-  if (!genre) throw new BadRequestError("genre is required");
-
-  // -----------------------------
-  // SLUG: generate + ensure unique
-  // -----------------------------
-  const makeBaseSlug = (raw: string) => slugify(String(raw ?? "").trim());
-
-  let baseSlug = makeBaseSlug(body.slug ? String(body.slug) : title);
-  if (!baseSlug) baseSlug = makeBaseSlug(title); // safety
-
-  let slug = baseSlug;
-  let i = 2;
-
-  while (await bookRepo.existsSlug(slug)) {
-    slug = `${baseSlug}-${i}`;
-    i += 1;
-  }
-
-  const synopsis = body.synopsis ? String(body.synopsis) : null;
-  const coverImageUrl = body.coverUrl ? String(body.coverUrl) : null;
-
-  const id = await bookRepo.createBook({
-    authorId: author.id,
-    title,
-    genre,
-    slug,
-    synopsis: synopsis ?? undefined,
-    coverImageUrl: coverImageUrl ?? undefined,
-    status: body.status ?? "DRAFT",
-    visibility: body.visibility ?? "PUBLIC",
-  });
-
-  if (Array.isArray(body.tags) && body.tags.length) {
-    const tags = await tagRepo.ensureTags(body.tags);
-    await bookRepo.setBookTags(id, tags.map((t: any) => t.id));
-  }
-
-  // Clear cache for this slug (even though create normally doesn't need it)
-  await cacheDel(`book:${slug}`);
-
-  return { id, slug };
-};
-
-
-export const authorUpdateBook = async (userId: number, bookId: number, body: any) => {
-  const author = await authorRepo.findAuthorByUserId(userId);
-  if (!author) throw new ForbiddenError('User is not an author');
-
-  const book = await bookRepo.findBookByIdForAuthor(bookId, author.id);
-  if (!book) throw new NotFoundError('Book not found');
-
-  const patch: any = {};
-
-  if (body.title !== undefined) {
-    const t = String(body.title).trim();
-    if (!t) throw new BadRequestError('title cannot be empty');
-    patch.title = t;
-  }
-
-  if (body.genre !== undefined) {
-    const g = String(body.genre).trim();
-    if (!g) throw new BadRequestError('genre cannot be empty');
-    patch.genre = g;
-  }
-  // if (body.slug !== undefined) patch.slug = String(body.slug).trim();
-  if (body.synopsis !== undefined) patch.synopsis = String(body.synopsis);
-  if (body.coverUrl !== undefined) patch.cover_image_url = String(body.coverUrl);
-  if (body.status !== undefined) patch.status = body.status;
-  if (body.visibility !== undefined) patch.visibility = body.visibility;
-
-  await bookRepo.updateBook(bookId, author.id, patch);
-
-  // tags
-  if (Array.isArray(body.tags)) {
-    const tags = await tagRepo.ensureTags(body.tags);
-    await bookRepo.setBookTags(bookId, tags.map((t: any) => t.id));
-  }
-
-  // // invalidate caches for old & new slug
-  await cacheDel(`book:${book.slug}`);
-  // if (patch.slug && patch.slug !== book.slug) await cacheDel(`book:${patch.slug}`);
-
-  return { ok: true };
-};
-
-export const authorCreateChapter = async (userId: number, bookId: number, body: any) => {
-  const author = await authorRepo.findAuthorByUserId(userId);
-  if (!author) throw new ForbiddenError('User is not an author');
-
-  const book = await bookRepo.findBookByIdForAuthor(bookId, author.id);
-  if (!book) throw new NotFoundError('Book not found');
-
-  const title = String(body.title ?? '').trim();
-  const contentMd = String(body.contentMarkdown ?? body.contentMd ?? '').trim();
-  if (!title) throw new BadRequestError('title is required');
-  if (!contentMd) throw new BadRequestError('contentMarkdown is required');
-
-  const visibility = (body.visibility ?? 'PUBLIC') as any;
-  const isDraft = body.isDraft === undefined ? 1 : (body.isDraft ? 1 : 0);
-
-  const chSlug = body.slug ? String(body.slug).trim() : slugify(title);
-
-  const scheduledAt = body.plannedReleaseAt ? String(body.plannedReleaseAt) : null;
-  const publishedAt = isDraft === 0 ? (body.publishedAt ? String(body.publishedAt) : new Date().toISOString().slice(0, 19).replace('T', ' ')) : null;
-
-  const { chapterId, chapterNo } = await chapterRepo.createChapter({
-    bookId,
-    authorId: author.id,
-    title,
-    slug: chSlug,
-    contentMd,
-    visibility,
-    isDraft,
-    scheduledAt,
-    publishedAt,
-    wordCount: body.wordCount ?? null,
-  });
-
-  // invalidate book cache since totals/locks change
-  await cacheDel(`book:${book.slug}`);
-
-  return { chapterId, chapterNo };
-};
-
-export const authorUpdateChapter = async (userId: number, bookId: number, chapterId: number, body: any) => {
-  const author = await authorRepo.findAuthorByUserId(userId);
-  if (!author) throw new ForbiddenError('User is not an author');
-
-  const book = await bookRepo.findBookByIdForAuthor(bookId, author.id);
-  if (!book) throw new NotFoundError('Book not found');
-
-  const patch: any = {};
-  if (body.title !== undefined) patch.title = String(body.title).trim();
-  if (body.slug !== undefined) patch.slug = String(body.slug).trim();
-  if (body.contentMd !== undefined) patch.content_md = String(body.contentMd);
-  if (body.wordCount !== undefined) patch.word_count = Number(body.wordCount);
-  if (body.visibility !== undefined) patch.visibility = body.visibility;
-  if (body.isDraft !== undefined) patch.is_draft = body.isDraft ? 1 : 0;
-  if (body.scheduledAt !== undefined) patch.scheduled_at = body.scheduledAt ? String(body.scheduledAt) : null;
-  if (body.publishedAt !== undefined) patch.published_at = body.publishedAt ? String(body.publishedAt) : null;
-
-  const affected = await chapterRepo.updateChapter(chapterId, author.id, patch);
-  if (!affected) throw new NotFoundError('Chapter not found');
-
-  // invalidate caches
-  await cacheDel(`book:${book.slug}`);
-  await cacheDel(`chapter:${chapterId}`);
-
-  return { ok: true };
-};
+// Legacy callers may omit requestId; the new editor always supplies a stable save ID.
+export const authorCreateBook = (userId: number, body: any) =>
+  savePublication(userId, { ...body, requestId: body.requestId ?? randomUUID() }, 'book');
+export const authorUpdateBook = (userId: number, bookId: number, body: any) =>
+  savePublication(userId, { ...body, requestId: body.requestId ?? randomUUID() }, 'book', bookId);
+export const authorCreateChapter = (userId: number, bookId: number, body: any) =>
+  savePublication(userId, { ...body, requestId: body.requestId ?? randomUUID() }, 'chapter', bookId);
+export const authorUpdateChapter = (userId: number, bookId: number, chapterId: number, body: any) =>
+  savePublication(userId, { ...body, requestId: body.requestId ?? randomUUID() }, 'chapter', bookId, chapterId);
 
 export const listBooksByAuthorPublic = async (q: {
   authorId: number;
@@ -486,6 +341,7 @@ export const authorGetChapterDetail = async (
     title: chapter.title,
     slug: chapter.slug,
     contentMarkdown: chapter.content_md,
+    images: await getChapterImages(chapter.id),
     wordCount: chapter.word_count,
     visibility: chapter.visibility,
     isDraft: Boolean(chapter.is_draft),

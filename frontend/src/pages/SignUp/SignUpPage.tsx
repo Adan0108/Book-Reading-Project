@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import type React from 'react';
 import { FiMail } from 'react-icons/fi';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../store/useAuthStore';
