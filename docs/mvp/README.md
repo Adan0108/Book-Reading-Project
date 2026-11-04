@@ -1,6 +1,6 @@
 # HiBook MVP implementation
 
-**Release verdict: NOT READY.** Authentication is being repaired first; the block editor, monetization, chat and moderation phases remain outstanding. The [historical audit](../mvp-audit/README.md) records the original baseline, not the current regression result.
+**Release verdict: NOT READY.** Authentication and author provisioning are merged. The structured writing studio and reader are in final verification; monetization, chat, moderation and later integration phases remain outstanding. The [historical audit](../mvp-audit/README.md) records the original baseline, not the current regression result.
 
 | Record | Purpose |
 |---|---|
@@ -9,6 +9,8 @@
 | [Security](../security/AUTH_SESSIONS.md) | Implemented session and setup boundaries, rollout trade-offs |
 | [Test report](TEST_REPORT.md) | Current executed validation |
 | [Publishing architecture and API](../publishing/PUBLISHING_REPORT.md) | Existing publishing contracts and additive schema |
+| [Writing studio architecture](../architecture/WRITING_STUDIO.md) | Engine choice, structured documents, media, autosave and rollback |
+| [Current API changes](API_CONTRACTS.md) | Implemented authentication and structured-publishing additions |
 | [Remaining roadmap](../mvp-audit/IMPLEMENTATION_ROADMAP.md) | Baseline dependencies for later phases |
 
 All future feature claims and the final repository README must reflect merged, tested behavior. External service configuration and live verification are separate from implementation completion.

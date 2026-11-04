@@ -29,8 +29,15 @@ test('real author publishing, direct Cloudinary uploads, edit and reader order',
   await page.getByRole('button', { name: 'Publish Book', exact: true }).click();
   await expect(page.getByRole('status', { name: 'Save progress' })).toHaveText('Published successfully.');
   expect(cloudUploads).toHaveLength(2);
-  await page.getByRole('link', { name: 'Create Chapter', exact: true }).click();
-  await page.getByLabel('Title', { exact: true }).fill('Visual pages');
+  // Preserve the original visual-page workflow for chapters created before structured documents.
+  // New chapter creation is exercised through the writing studio in novel.spec.ts.
+  const seeded=await request.post(`http://localhost:3000/v1/api/authors/me/books/${bookId}/chapters`,{
+    headers:{Authorization:`Bearer ${loginData.tokens.accessToken}`,'x-client-id':String(loginData.user.id)},
+    data:{title:'Visual pages',isDraft:true,requestId:crypto.randomUUID()},
+  });
+  expect(seeded.ok()).toBe(true);
+  const seededChapter=(await seeded.json()).metadata;
+  await page.goto(`/author/comic/${bookId}/chapter/${seededChapter.chapterId}/edit`);
   const drop = page.getByText(/Or drag images here/).locator('..');
   const data = await page.evaluateHandle(base64 => {
     const transfer = new DataTransfer();
@@ -57,7 +64,10 @@ test('real author publishing, direct Cloudinary uploads, edit and reader order',
   await expect(page.getByRole('article')).toHaveCount(2);
   await page.getByRole('button', { name: 'Save Draft', exact: true }).click();
   await expect(page).toHaveURL(/\/chapter\/\d+\/edit/);
+  await expect(page.getByRole('status',{name:'Save progress'})).toHaveText('Draft saved successfully.');
+  await page.reload();
   await expect(page.getByRole('article')).toHaveCount(2);
+  await expect(page.getByRole('article').first().locator('img')).toHaveAttribute('src',/^https:/);
   expect(cloudUploads).toHaveLength(4);
   await page.getByRole('button', { name: 'Move page 2 up', exact: true }).click();
   const publishedResponse = page.waitForResponse(r => r.url().includes('/chapters/') && r.request().method() === 'PATCH');

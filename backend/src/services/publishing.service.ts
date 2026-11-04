@@ -1,4 +1,6 @@
 import { randomUUID, createHash } from 'crypto';
+import {parseNovelDocument,documentSummary} from '../domain/novelDocument';
+import {getChapterDocument,saveChapterDocument} from '../models/repositories/chapterDocument.repo';
 import type { PoolConnection } from 'mysql2/promise';
 import { pool } from '../dbs/init.mysql';
 import cloudinary from '../configs/cloudinary.config';
@@ -160,12 +162,18 @@ export async function savePublication(userId: number, body: any, kind: 'book' | 
     } else {
       if (!b) throw new NotFoundError('Book not found');
       const existing = existingChapter;
+      const document=body.contentDocument===undefined
+        ? (existing?await getChapterDocument(chapterId!,db):null)
+        : parseNovelDocument(body.contentDocument);
+      if(document && body.contentDocument===undefined && (body.contentMd!==undefined||body.contentMarkdown!==undefined)) throw new ConflictRequestError('This chapter uses the writing studio. Reload before changing its content.');
+      const summary=document?documentSummary(document):null;
       const content = String(body.contentMd ?? body.contentMarkdown ?? existing?.content_md ?? '');
-      const ids = body.imageAssetIds ?? (existing ? (await getChapterImages(chapterId!, db)).map(i => i.id) : []);
+      const ids = summary?.assetIds ?? body.imageAssetIds ?? (existing ? (await getChapterImages(chapterId!, db)).map(i => i.id) : []);
+      if(summary && body.imageAssetIds!==undefined && JSON.stringify(summary.assetIds)!==JSON.stringify(body.imageAssetIds)) throw new BadRequestError('Illustration references must match the document order');
       validateAssetIds(ids);
       if (![true,false,0,1,undefined].includes(body.isDraft)) throw new BadRequestError('Invalid draft state');
       const isDraft = body.isDraft === undefined ? (existing?.is_draft ?? 1) : Number(Boolean(body.isDraft));
-      if (!isDraft && !content.trim() && !ids.length) throw new BadRequestError('Add chapter text or at least one page before publishing');
+      if (!isDraft && !(summary?summary.wordCount>0:content.trim()) && !ids.length) throw new BadRequestError('Add chapter text or at least one illustration before publishing');
       for (const id of ids) await attachable(db,id,authorId,'chapter',bookId,chapterId);
       let chapterNo = existing?.chapter_no;
       if (!existing) {
@@ -175,13 +183,14 @@ export async function savePublication(userId: number, body: any, kind: 'book' | 
         chapterId = r.insertId;
       } else await db.query(`UPDATE chapters SET title=?,content_md=?,visibility=?,is_draft=?,published_at=IF(?=0,COALESCE(published_at,NOW()),NULL) WHERE id=?`, [title,content,visibility,isDraft,isDraft,chapterId]);
       // Preserve the optional legacy metadata contract within the same transaction.
+      if(document){await saveChapterDocument(db,chapterId!,document);await db.query('UPDATE chapters SET word_count=? WHERE id=?',[summary!.wordCount,chapterId]);}
       const scheduled = body.scheduledAt !== undefined ? body.scheduledAt : body.plannedReleaseAt;
       if (scheduled !== undefined) {
         const date = scheduled ? new Date(scheduled) : null;
         if (date && !Number.isFinite(date.getTime())) throw new BadRequestError('Invalid scheduled date');
         await db.query('UPDATE chapters SET scheduled_at=? WHERE id=?', [date,chapterId]);
       }
-      if (body.wordCount !== undefined) {
+      if (body.wordCount !== undefined && !document) {
         if (!Number.isSafeInteger(body.wordCount) || body.wordCount < 0) throw new BadRequestError('Invalid word count');
         await db.query('UPDATE chapters SET word_count=? WHERE id=?', [body.wordCount,chapterId]);
       }

@@ -6,6 +6,7 @@ process.env.MYSQL_USER = 'root';
 process.env.MYSQL_PASSWORD = 'publishing-qa-local';
 process.env.MYSQL_DB = 'publishing_qa';
 process.env.PORT = '3000';
+process.env.NODE_ENV='test';
 process.env.FRONTEND_URL = 'http://localhost:8000';
 // Always isolate email as well as the database, regardless of local .env values.
 process.env.EMAIL_HOST='127.0.0.1'; process.env.EMAIL_PORT='2526'; process.env.EMAIL_SECURE='false';

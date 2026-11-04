@@ -6,9 +6,9 @@ The platform is **not release ready**. This is a living implementation record, s
 
 | Phase | Status | Remaining acceptance work |
 |---|---|---|
-| Audit documentation preservation | Complete | Commit `eed0a70`, pushed to main |
-| Authentication and author provisioning | VERIFIED on `fix/auth-session-security` | 38 backend tests, 11 frontend tests, three headed E2E tests; types/lint/builds pass; pending Git integration |
-| Text-first block studio and reader | Pending | Mature editor evaluation, versioned content, inline assets, autosave, long-form desktop/mobile verification |
+| Audit documentation preservation | MERGED | Commit `eed0a70`, pushed to main |
+| Authentication and author provisioning | MERGED | `fix/auth-session-security`: `bac8f04`; merge `4e602cd`; both remotes verified. 38 backend / 11 frontend tests and three headed E2E passed at merge. |
+| Text-first block studio and reader | VERIFIED | `feat/light-novel-editor`: BlockNote, versioned documents, transactional asset order, autosave, legacy compatibility and reader preferences. Final 47 backend / 12 frontend tests and six headed browser tests passed; types/lint/builds pass. Pending Git integration. |
 | Author memberships and entitlement policy | Pending | Tier management, pricing policy, centralized chapter/post/chat access |
 | Payments and donations | Pending | Stripe adapter, sandbox checkout, verified/idempotent webhooks, ledger and reconciliation |
 | Member chat | Pending | Authenticated sockets, persisted history/read state, entitlement expiry |

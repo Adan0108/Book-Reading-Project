@@ -5,9 +5,9 @@ States: NOT STARTED, IN PROGRESS, BLOCKED, COMPLETED, VERIFIED, MERGED. A passin
 | Category | Status | Implementation / evidence | Remaining work / commit |
 |---|---|---|---|
 | Audit preservation | MERGED | `docs/mvp-audit/`, `docs/publishing/` | `eed0a70` |
-| Auth and sessions | VERIFIED | `session.service.ts`, `access.service.ts`, auth middleware, `auth.integration.test.ts`, `e2e/auth.spec.ts` | [Passed checks](TEST_REPORT.md); pending merge |
-| Author approval | VERIFIED | Transactional application decisions, author backfill, application/review pages | Headed onboarding passed; pending merge |
-| Text-first block editor | NOT STARTED | Baseline plain Markdown editor | Versioned blocks, autosave, inline media, long-form validation |
+| Auth and sessions | MERGED | `session.service.ts`, `access.service.ts`, auth middleware, `auth.integration.test.ts`, `e2e/auth.spec.ts` | `bac8f04`, merge `4e602cd`; [passed checks](TEST_REPORT.md) |
+| Author approval | MERGED | Transactional application decisions, author backfill, application/review pages | `bac8f04`, merge `4e602cd`; headed onboarding passed |
+| Text-first block editor | VERIFIED | `features/studio/`, `domain/novelDocument.ts`, chapter document repository/migration | [Architecture](../architecture/WRITING_STUDIO.md), [passed checks](TEST_REPORT.md); merge pending |
 | Book/chapter CRUD and draft/publish | MERGED | Existing publishing service and tests; publishing report | Rich text integration; original merge `82b4bf9` |
 | Reader experience | IN PROGRESS | Safe legacy Markdown and ordered illustrations | Typography, preferences, navigation/progress and structured rendering |
 | Optional Cloudinary images | MERGED | Signed intent/confirmation flow and existing E2E | Preserve through rich text changes; original merge `82b4bf9` |

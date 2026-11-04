@@ -1,2 +1,6 @@
-import PublicationEditor from '../features/author/PublicationEditor';
-export default function CreateChapterPage() { return <PublicationEditor key={location.pathname} kind="chapter" />; }
+import PublicationEditor from "../features/author/PublicationEditor";
+import { useParams } from "react-router-dom";
+export default function CreateChapterPage() {
+  const { chapterId } = useParams();
+  return <PublicationEditor kind="chapter" edit={Boolean(chapterId)} />;
+}

@@ -1,140 +1,247 @@
-import Markdown from 'react-markdown';
-import { useEffect } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
-import { useBookStore } from '../store/useBookStore';
-import { useThemeStore } from '../store/useThemeStore';
-import { FiChevronLeft, FiList, FiChevronRight } from 'react-icons/fi';
+import Markdown from "react-markdown";
+import { useEffect, useState } from "react";
+import { Link, useNavigate, useParams } from "react-router-dom";
+import api from "../lib/axios";
+import { useThemeStore } from "../store/useThemeStore";
+import type { BookDetail, Chapter } from "../type/book";
+import NovelContent from "../features/reader/NovelContent";
+import { useReaderPreferences } from "../features/reader/useReaderPreferences";
+import { message } from "../features/author/images";
+import "../features/reader/reader.css";
 
-const ChapterReadingPage = () => {
-    const { slug, chapterNo } = useParams<{ slug: string; chapterNo: string }>();
-    const navigate = useNavigate();
-    const { isDark } = useThemeStore();
-
-    const { currentChapter, currentBook, isLoadingChapter, fetchChapterContent, fetchBookBySlug } = useBookStore();
-
-    useEffect(() => {
-        if (slug && chapterNo) {
-            // Parse the chapterNo string from the URL into a number
-            fetchChapterContent(slug, parseInt(chapterNo, 10));
-            
-            // If the user navigated directly to this URL, we might need to fetch the book title too!
-            if (!currentBook || currentBook.slug !== slug) {
-                fetchBookBySlug(slug);
-            }
-          }
-    }, [slug, chapterNo, fetchChapterContent, fetchBookBySlug, currentBook]);
-
-    // --- LOADING STATE ---
-    if (isLoadingChapter){
-        return (
-            <div className={`min-h-screen flex items-center justify-center ${isDark ? 'bg-gray-900 text-white' : 'bg-gray-50 text-gray-900'}`}>
-                <div className="animate-pulse flex flex-col items-center">
-                    <div className="h-10 w-10 border-4 border-yellow-500 border-t-transparent rounded-full animate-spin mb-4"></div>
-                    <p className="font-medium">Đang tải nội dung chương...</p>
-                </div>
-            </div>
-        );
+interface Header {
+  id: number;
+  index: number;
+  title: string;
+  isLockedForCurrentUser?: boolean;
+}
+export default function ChapterReadingPage() {
+  const { slug, chapterNo } = useParams(),
+    navigate = useNavigate();
+  const isDark = useThemeStore((s) => s.isDark);
+  const { preferences, setPreferences } = useReaderPreferences(isDark);
+  const [chapter, setChapter] = useState<Chapter | null>(null),
+    [book, setBook] = useState<BookDetail | null>(null),
+    [headers, setHeaders] = useState<Header[]>([]);
+  const [loading, setLoading] = useState(true),
+    [error, setError] = useState(""),
+    [progress, setProgress] = useState(0),
+    [retry, setRetry] = useState(0);
+  useEffect(() => {
+    let active = true;
+    setLoading(true);
+    setError("");
+    setChapter(null);
+    setHeaders([]);
+    Promise.allSettled([
+      api.get(`/books/${slug}/chapters/${chapterNo}`),
+      api.get(`/books/${slug}`),
+      api.get(`/books/${slug}/chapters`),
+    ]).then(([content, detail, list]) => {
+      if (!active) return;
+      if (content.status === "fulfilled")
+        setChapter(content.value.data.metadata);
+      else setError(message(content.reason));
+      if (detail.status === "fulfilled") setBook(detail.value.data.metadata);
+      if (list.status === "fulfilled")
+        setHeaders(list.value.data.metadata.items ?? []);
+      setLoading(false);
+    });
+    return () => {
+      active = false;
+    };
+  }, [slug, chapterNo, retry]);
+  useEffect(() => {
+    if (!chapter) return;
+    const key = "hibook.reader.progress.v1",
+      identity = `${slug}:${chapterNo}`;
+    let restored = 0;
+    try {
+      restored =
+        JSON.parse(localStorage.getItem(key) || "{}")[identity]?.position ?? 0;
+    } catch {
+      /* Optional local preference. */
     }
-
-    // --- LOCKED / 404 STATE ---
-    if (!currentChapter) {
-        return (
-            <div className={`min-h-screen flex flex-col items-center justify-center gap-4 ${isDark ? 'bg-gray-900 text-white' : 'bg-white text-gray-900'}`}>
-                <span className="text-6xl">🔒</span>
-                <h2 className="text-2xl font-bold">Không thể tải chương này</h2>
-                <p className="text-gray-500">Chương này có thể yêu cầu thành viên VIP hoặc không tồn tại.</p>
-                <button 
-                    onClick={() => navigate(`/comic/${slug}`)}
-                    className="mt-4 px-6 py-2 bg-yellow-500 text-black font-bold rounded-full hover:bg-yellow-400 transition"
-                >
-                    Quay lại thông tin truyện
-                </button>
-            </div>
-        );
-    }
-
-    return (
-        <div className={`min-h-screen ${isDark ? 'bg-gray-950 text-gray-200' : 'bg-gray-100 text-gray-800'}`}>
-            
-            {/* READING NAVIGATION BAR */}
-            <div className={`sticky top-0 z-40 shadow-sm transition-colors ${isDark ? 'bg-gray-900/95 border-b border-gray-800' : 'bg-white/95 border-b border-gray-200'}`}>
-                
-                <div className="container mx-auto px-4 py-3 flex items-center justify-between max-w-4xl">
-
-                    {/* Back to Book Info */}
-                    <Link to={`/comic/${slug}`} className="flex items-center gap-2 hover:text-yellow-500 transition-colors font-semibold truncate max-w-[200px] md:max-w-xs">
-                        <FiChevronLeft className="text-xl flex-shrink-0" />
-                        <span className="truncate">{currentBook?.title || 'Quay lại'}</span>
-                    </Link>
-
-                    {/* Current Chapter Indicator */}
-                    <div className="font-bold text-center">
-                        Chương {currentChapter.index}
-                    </div>
-
-                    {/* Placeholder for Next/Prev Controls */}
-                    <div className="flex gap-2">
-                        <button className={`p-2 rounded-full ${isDark ? 'hover:bg-gray-800' : 'hover:bg-gray-200'}`} title="Danh sách chương">
-                            <FiList className="text-xl" />
-                        </button>
-                    </div>
-
-                </div>
-
-            </div>
-
-            {/* COMIC CONTENT CONTAINER */}
-            <div className="container mx-auto max-w-3xl py-8 px-4 flex flex-col items-center shadow-2xl min-h-screen">
-                
-                {/* Title Header */}
-                <div className="text-center mb-8">
-                    <h1 className="text-2xl font-black mb-2">Chương {currentChapter.index}</h1>
-                    {currentChapter.title && (
-                        <h2 className={`text-lg ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>{currentChapter.title}</h2>
-                    )}
-                </div>
-
-                {/* Markdown Content Block */}
-                <div className="w-full">
-                    {currentChapter.images?.map((image, index) => <img key={image.id} src={image.imageUrl} alt={`Page ${index + 1}`} loading={index ? 'lazy' : 'eager'} className="w-full h-auto" />)}
-                    <Markdown>{currentChapter.contentMarkdown || ''}</Markdown>
-                </div>
-
-                {/* BOTTOM NAVIGATION */}
-                <div className="w-full flex justify-between items-center mt-16 pt-8 border-t border-gray-500/30">
-                    
-                    {/* Previous Button */}
-                    <button 
-                        onClick={() => navigate(`/comic/${slug}/chapters/${currentChapter.index - 1}`)}
-                        disabled={currentChapter.index <= 1}
-                        className={`flex items-center gap-2 px-6 py-3 rounded-full font-bold transition
-                            ${currentChapter.index <= 1 
-                                ? 'bg-gray-300 text-gray-500 cursor-not-allowed dark:bg-gray-800 dark:text-gray-600' 
-                                : 'bg-gray-800 text-white hover:bg-yellow-500 hover:text-black'
-                            }`}
-                    >
-                        <FiChevronLeft /> Chương trước
-                    </button>
-
-                    {/* Next Button */}
-                    <button 
-                        onClick={() => navigate(`/comic/${slug}/chapters/${currentChapter.index + 1}`)}
-                        disabled={currentBook ? currentChapter.index >= currentBook.totalChapters : false}
-                        className={`flex items-center gap-2 px-6 py-3 rounded-full font-bold transition
-                            ${(currentBook && currentChapter.index >= currentBook.totalChapters)
-                                ? 'bg-gray-300 text-gray-500 cursor-not-allowed dark:bg-gray-800 dark:text-gray-600'
-                                : 'bg-gray-800 text-white hover:bg-yellow-500 hover:text-black'
-                            }`}
-                    >
-                        Chương sau <FiChevronRight />
-                    </button>
-
-                </div>
-
-            </div>
-
-        </div>
+    let timer: number | undefined;
+    const frame = requestAnimationFrame(() =>
+      window.scrollTo({
+        top:
+          Math.max(0, Math.min(1, restored)) *
+          (document.documentElement.scrollHeight - window.innerHeight),
+        behavior: "instant",
+      }),
     );
-};
-
-export default ChapterReadingPage;
+    const update = () => {
+      const distance =
+        document.documentElement.scrollHeight - window.innerHeight;
+      const position =
+        distance > 0 ? Math.max(0, Math.min(1, window.scrollY / distance)) : 1;
+      setProgress(position);
+      window.clearTimeout(timer);
+      timer = window.setTimeout(() => {
+        try {
+          const saved = JSON.parse(localStorage.getItem(key) || "{}");
+          saved[identity] = { position, updatedAt: Date.now() };
+          const bounded = Object.fromEntries(
+            Object.entries(saved)
+              .sort(
+                (a, b) =>
+                  Number((b[1] as { updatedAt: number }).updatedAt) -
+                  Number((a[1] as { updatedAt: number }).updatedAt),
+              )
+              .slice(0, 50),
+          );
+          localStorage.setItem(key, JSON.stringify(bounded));
+        } catch {
+          /* Do not block reading when storage is full or disabled. */
+        }
+      }, 500);
+    };
+    window.addEventListener("scroll", update, { passive: true });
+    window.addEventListener("resize", update);
+    update();
+    return () => {
+      cancelAnimationFrame(frame);
+      window.clearTimeout(timer);
+      window.removeEventListener("scroll", update);
+      window.removeEventListener("resize", update);
+    };
+  }, [chapter, slug, chapterNo]);
+  const position = headers.findIndex((h) => h.index === chapter?.index),
+    previous = position > 0 ? headers[position - 1] : null,
+    next = position >= 0 ? headers[position + 1] : null;
+  const chapterLink = (index: number) => `/comic/${slug}/chapters/${index}`;
+  return (
+    <main className="novel-reader" data-theme={preferences.theme}>
+      <a href="#chapter-content" className="sr-only focus:not-sr-only">
+        Skip to chapter
+      </a>
+      <nav className="reader-bar" aria-label="Reader controls">
+        <div className="reader-bar-inner">
+          <Link to={`/comic/${slug}`}>← {book?.title || "Book details"}</Link>
+          <div className="reader-settings">
+            <label>
+              Text size{" "}
+              <select
+                aria-label="Text size"
+                value={preferences.fontSize}
+                onChange={(e) =>
+                  setPreferences((p) => ({
+                    ...p,
+                    fontSize: Number(e.target.value),
+                  }))
+                }
+              >
+                {[16, 18, 20, 22, 24, 28].map((size) => (
+                  <option key={size} value={size}>
+                    {size}px
+                  </option>
+                ))}
+              </select>
+            </label>
+            <button
+              type="button"
+              onClick={() =>
+                setPreferences((p) => ({
+                  ...p,
+                  theme: p.theme === "dark" ? "light" : "dark",
+                }))
+              }
+            >
+              {preferences.theme === "dark"
+                ? "Light reading theme"
+                : "Dark reading theme"}
+            </button>
+            <span aria-label="Reading progress">
+              {Math.round(progress * 100)}%
+            </span>
+          </div>
+        </div>
+        <div
+          className="reading-progress"
+          style={{ width: `${progress * 100}%` }}
+        />
+      </nav>
+      {loading ? (
+        <p role="status" className="p-12 text-center">
+          Opening chapter…
+        </p>
+      ) : !chapter ? (
+        <section className="p-12 text-center space-y-4">
+          <h1 className="text-2xl font-bold">This chapter is unavailable</h1>
+          <p role="alert">
+            {error ||
+              "It may require membership, sign-in or a later release date."}
+          </p>
+          <Link className="btn" to="/login">
+            Sign in
+          </Link>
+          <button className="btn" onClick={() => setRetry((v) => v + 1)}>
+            Retry
+          </button>
+        </section>
+      ) : (
+        <>
+          <div className="reader-chapters">
+            <label>
+              Chapter list{" "}
+              <select
+                aria-label="Chapter list"
+                value={chapter.index}
+                onChange={(e) => navigate(chapterLink(Number(e.target.value)))}
+              >
+                {headers.map((h) => (
+                  <option key={h.id} value={h.index}>
+                    {h.index}. {h.title}
+                    {h.isLockedForCurrentUser ? " · Members" : ""}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <span>{headers.length} published chapters</span>
+          </div>
+          <article
+            id="chapter-content"
+            className="novel-prose"
+            style={{ fontSize: preferences.fontSize }}
+          >
+            <header>
+              <p>Chapter {chapter.index}</p>
+              <h1>{chapter.title}</h1>
+            </header>
+            {chapter.contentDocument ? (
+              <NovelContent
+                document={chapter.contentDocument}
+                images={chapter.images ?? []}
+              />
+            ) : (
+              <>
+                {chapter.images?.map((image, index) => (
+                  <img
+                    key={image.id}
+                    src={image.imageUrl}
+                    alt={`Page ${index + 1}`}
+                    loading={index ? "lazy" : "eager"}
+                  />
+                ))}
+                <Markdown>{chapter.contentMarkdown || ""}</Markdown>
+              </>
+            )}
+            <nav className="reader-nav" aria-label="Chapter navigation">
+              {previous ? (
+                <Link to={chapterLink(previous.index)}>← Previous chapter</Link>
+              ) : (
+                <span>First chapter</span>
+              )}
+              {next ? (
+                <Link to={chapterLink(next.index)}>Next chapter →</Link>
+              ) : (
+                <Link to={`/comic/${slug}`}>Back to book</Link>
+              )}
+            </nav>
+          </article>
+        </>
+      )}
+    </main>
+  );
+}

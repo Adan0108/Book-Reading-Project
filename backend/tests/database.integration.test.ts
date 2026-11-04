@@ -72,4 +72,16 @@ describe.skipIf(!enabled)('real MySQL publishing lifecycle', () => {
     await expect(save(userId,{requestId:randomUUID(),imageAssetIds:[foreign]},'chapter',bookId,chapterId)).rejects.toMatchObject({status:403});
     expect(await images(chapterId)).toHaveLength(2);
   });
+  it('persists a long structured chapter, preserves legacy source and enforces media order transactionally',async()=>{
+    const {getChapterDocument}=await import('../src/models/repositories/chapterDocument.repo');
+    const legacy=await save(userId,{requestId:randomUUID(),title:'Long novel',contentMd:'Original legacy text',isDraft:true},'chapter',bookId);
+    const contentDocument={version:1,blocks:Array.from({length:120},(_,i)=>({id:`paragraph-${i}`,type:'paragraph',props:{},content:[{type:'text',text:'The distant train crossed the quiet valley. '.repeat(7),styles:{}}],children:[]}))};
+    await save(userId,{requestId:randomUUID(),contentDocument,isDraft:false},'chapter',bookId,legacy.chapterId);
+    expect(await getChapterDocument(legacy.chapterId)).toEqual(contentDocument);
+    const [[row]]:any=await pool.query('SELECT content_md,word_count FROM chapters WHERE id=?',[legacy.chapterId]);
+    expect(row.content_md).toBe('Original legacy text');expect(row.word_count).toBe(5880);
+    await expect(save(userId,{requestId:randomUUID(),contentMd:'Unsafe old client overwrite'},'chapter',bookId,legacy.chapterId)).rejects.toMatchObject({status:409});
+    await expect(save(userId,{requestId:randomUUID(),contentDocument,imageAssetIds:[assetIds[0]]},'chapter',bookId,legacy.chapterId)).rejects.toMatchObject({status:400});
+    expect(await getChapterDocument(legacy.chapterId)).toEqual(contentDocument);
+  });
 });
