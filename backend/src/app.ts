@@ -45,7 +45,7 @@ const ONE_DAY_IN_MS = 24 * 60 * 60 * 1000;
 app.use(morgan("dev"));
 app.use(helmet());
 app.use(compression());
-app.use(express.json());
+app.use(express.json({limit:'1mb'}));
 app.use(express.urlencoded({ extended: true }));
 //
 app.use(cors({

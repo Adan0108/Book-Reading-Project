@@ -12,7 +12,7 @@ router.get('/', asyncHandler(bookController.listBooks));
 router.get('/:slug', asyncHandler(bookController.getBookBySlug));
 
 // TOC headers 
-router.get('/:slug/chapters', asyncHandler(bookController.listBookChapters));
+router.get('/:slug/chapters', optionalAuthenticationV2, asyncHandler(bookController.listBookChapters));
 
 // Chapter content 
 router.get('/:slug/chapters/:index', optionalAuthenticationV2 ,asyncHandler(bookController.getChapterByIndex));

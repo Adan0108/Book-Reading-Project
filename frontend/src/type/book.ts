@@ -30,6 +30,7 @@ export interface BookDetail extends Book {
 }
 
 export interface Chapter {
+    contentDocument?: import('../features/studio/document').NovelDocument|null;
     images?: { id: string; imageUrl: string; pageOrder: number }[];
     id: number;
     index: number;

@@ -1,4 +1,5 @@
 import { randomUUID } from 'crypto';
+import {getChapterDocument} from '../models/repositories/chapterDocument.repo';
 import { savePublication, getChapterImages } from './publishing.service';
 import { BadRequestError, ForbiddenError, NotFoundError, AuthFailureError } from '../core/error.response';
 import * as bookRepo from '../models/repositories/book.repo';
@@ -182,6 +183,7 @@ export const getChapterContent = async (slug: string, chapterIndex: number, view
     index: chapter.chapter_no,
     title: chapter.title,
     contentMarkdown: chapter.content_md,
+    contentDocument: await getChapterDocument(chapter.id),
     images: await getChapterImages(chapter.id),
     visibility: chapter.visibility,
     releaseAt: chapter.published_at,
@@ -340,6 +342,7 @@ export const authorGetChapterDetail = async (
     title: chapter.title,
     slug: chapter.slug,
     contentMarkdown: chapter.content_md,
+    contentDocument: await getChapterDocument(chapter.id),
     images: await getChapterImages(chapter.id),
     wordCount: chapter.word_count,
     visibility: chapter.visibility,

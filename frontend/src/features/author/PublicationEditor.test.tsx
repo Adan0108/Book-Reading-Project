@@ -52,4 +52,20 @@ describe('publication editor lifecycle', () => {
     await userEvent.click(screen.getByRole('button',{name:'Stay'}));
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
+  it('resolves an ambiguous creation before saving later edits to the same book',async()=>{
+    vi.mocked(uploadImages).mockResolvedValue([]);
+    vi.mocked(api.request).mockRejectedValueOnce(new Error('Response lost'))
+      .mockResolvedValueOnce({data:{metadata:{id:99,slug:'saved'}}})
+      .mockResolvedValueOnce({data:{metadata:{id:99,slug:'saved'}}});
+    const router=createMemoryRouter([{path:'/new',element:<PublicationEditor kind="book"/>},{path:'/author/comic/:bookId/edit',element:<p>Saved book</p>}],{initialEntries:['/new']});
+    render(<RouterProvider router={router}/>);
+    await userEvent.type(screen.getByLabelText('Title'),'First title');await userEvent.type(screen.getByLabelText('Genre'),'Novel');
+    await userEvent.click(screen.getByRole('button',{name:'Save Draft'}));await screen.findByText('Response lost');
+    await userEvent.clear(screen.getByLabelText('Title'));await userEvent.type(screen.getByLabelText('Title'),'Later edits');
+    await userEvent.click(screen.getByRole('button',{name:'Save Draft'}));await screen.findByText('Saved book');
+    const calls=vi.mocked(api.request).mock.calls.map(([config])=>config);
+    expect(calls).toHaveLength(3);
+    expect(calls[1].data).toEqual(calls[0].data);
+    expect(calls[2]).toMatchObject({url:'/authors/me/books/99',method:'PATCH',data:{title:'Later edits'}});
+  });
 });

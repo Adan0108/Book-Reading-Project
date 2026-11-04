@@ -1,0 +1,191 @@
+.novel-reader {
+  --reader-bg: #faf9f6;
+  --reader-text: #282725;
+  --reader-panel: #fff;
+  background: var(--reader-bg);
+  color: var(--reader-text);
+  min-height: 100vh;
+}
+.novel-reader[data-theme="dark"] {
+  --reader-bg: #17191d;
+  --reader-text: #dededb;
+  --reader-panel: #22252b;
+  color-scheme: dark;
+}
+.reader-bar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background: var(--reader-panel);
+  border-bottom: 1px solid
+    color-mix(in srgb, var(--reader-text) 12%, transparent);
+  padding: 0.8rem 1rem;
+}
+.reader-bar-inner {
+  max-width: 72rem;
+  margin: auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+.reader-settings {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  font:
+    500 0.85rem system-ui,
+    sans-serif;
+}
+.reader-settings button,
+.reader-settings select,
+.reader-chapters select {
+  min-height: 2.75rem;
+  border: 1px solid #8887;
+  border-radius: 0.5rem;
+  padding: 0.4rem 0.65rem;
+  background: var(--reader-panel);
+}
+.reading-progress {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  height: 2px;
+  background: #b58630;
+  max-width: 100%;
+}
+.novel-prose {
+  max-width: 42rem;
+  margin: 0 auto;
+  padding: 3rem 1.25rem;
+  line-height: 1.9;
+  overflow-wrap: anywhere;
+  font-family: Georgia, "Times New Roman", serif;
+}
+.novel-prose > header {
+  font-family: system-ui, sans-serif;
+  margin-bottom: 3rem;
+  text-align: center;
+}
+.novel-prose h1 {
+  font-size: 1.85em;
+  line-height: 1.3;
+  font-weight: 700;
+}
+.novel-prose h2 {
+  font-size: 1.5em;
+  line-height: 1.5;
+  font-weight: 700;
+  margin: 2em 0 1em;
+}
+.novel-prose h3 {
+  font-size: 1.3em;
+  font-weight: 700;
+  margin: 1.75em 0 0.75em;
+}
+.novel-prose h4 {
+  font-size: 1.1em;
+  font-weight: 700;
+  margin: 1.5em 0 0.5em;
+}
+.novel-prose p {
+  margin: 0 0 1.2em;
+  white-space: pre-wrap;
+}
+.novel-prose blockquote {
+  border-left: 3px solid #b58630;
+  padding: 0.25em 1em;
+  font-style: italic;
+  margin: 1.5em 0;
+}
+.novel-prose hr {
+  width: 6rem;
+  margin: 3em auto;
+  border-top: 2px solid #8888;
+}
+.novel-prose img {
+  height: auto;
+  max-width: 100%;
+  margin: 1.5em auto;
+}
+.novel-prose figure {
+  margin: 2em 0;
+}
+.novel-prose figcaption {
+  text-align: center;
+  font: italic 0.85em system-ui;
+  color: inherit;
+  opacity: 0.75;
+}
+.novel-prose a {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.reader-author-note {
+  background: color-mix(in srgb, #b58630 9%, transparent);
+  border-left: 3px solid #b58630;
+  padding: 1.25rem;
+  margin: 2rem 0;
+  border-radius: 0.5rem;
+}
+.reader-note-label {
+  font:
+    600 0.8em system-ui,
+    sans-serif;
+  opacity: 0.75;
+}
+.reader-nested {
+  margin-left: 1em;
+}
+.reader-chapters {
+  max-width: 42rem;
+  margin: 2rem auto;
+  padding: 1rem;
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+}
+.reader-nav {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  font-family: system-ui, sans-serif;
+  margin-top: 4rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid #8885;
+}
+.reader-nav a {
+  display: inline-block;
+  padding: 0.75rem;
+  border: 1px solid #8886;
+  border-radius: 0.5rem;
+  text-decoration: none;
+}
+.novel-reader :focus-visible {
+  outline: 3px solid #b58630;
+  outline-offset: 3px;
+}
+@media (max-width: 600px) {
+  .novel-prose {
+    padding: 2rem 1rem;
+  }
+  .reader-settings {
+    gap: 0.35rem;
+  }
+  .reader-bar-inner {
+    gap: 0.5rem;
+  }
+  .novel-prose h1 {
+    font-size: 1.5em;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .novel-reader * {
+    scroll-behavior: auto !important;
+    transition: none !important;
+  }
+}
