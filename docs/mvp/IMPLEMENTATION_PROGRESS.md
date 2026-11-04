@@ -1,6 +1,6 @@
 # HiBook implementation progress
 
-Updated 4 November 2026 (Australia/Sydney). Baseline audit: [readiness audit](../mvp-audit/README.md).
+Updated 5 November 2026 (Australia/Sydney). Baseline audit: [readiness audit](../mvp-audit/README.md).
 
 The platform is **not release ready**. This is a living implementation record, separate from the historical audit. A checked item requires implementation and recorded validation; passing the publishing suite alone does not establish MVP readiness.
 
@@ -8,8 +8,8 @@ The platform is **not release ready**. This is a living implementation record, s
 |---|---|---|
 | Audit documentation preservation | MERGED | Commit `eed0a70`, pushed to main |
 | Authentication and author provisioning | MERGED | `fix/auth-session-security`: `bac8f04`; merge `4e602cd`; both remotes verified. 38 backend / 11 frontend tests and three headed E2E passed at merge. |
-| Text-first block studio and reader | VERIFIED | `feat/light-novel-editor`: BlockNote, versioned documents, transactional asset order, autosave, legacy compatibility and reader preferences. Final 47 backend / 12 frontend tests and six headed browser tests passed; types/lint/builds pass. Pending Git integration. |
-| Author memberships and entitlement policy | Pending | Tier management, pricing policy, centralized chapter/post/chat access |
+| Text-first block studio and reader | MERGED | `feat/light-novel-editor`: `d326c94`; merge `30fef17`; both remotes verified. 47 backend / 12 frontend tests and six headed browser tests passed; types/lint/builds pass. |
+| Author memberships and entitlement policy | VERIFIED | Branch `feat/author-memberships`. Tier management, pricing policy/audit, chapter/post/chat eligibility, post UI/API and manual cancellation implemented. 63 backend / 12 frontend tests and all seven headed journeys passed, including optional-auth restoration and recovery from session/profile outages. Provider cancellation/checkout belong to the next payment phase. |
 | Payments and donations | Pending | Stripe adapter, sandbox checkout, verified/idempotent webhooks, ledger and reconciliation |
 | Member chat | Pending | Authenticated sockets, persisted history/read state, entitlement expiry |
 | Admin moderation | Pending | Content/user actions, platform settings, audit log, operational dashboard |

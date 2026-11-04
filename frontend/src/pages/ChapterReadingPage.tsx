@@ -176,6 +176,7 @@ export default function ChapterReadingPage() {
           <Link className="btn" to="/login">
             Sign in
           </Link>
+          {book?.authorProfile?.id&&<Link className="btn btn-primary" to={`/author/${book.authorProfile.id}/memberships`}>View membership plans</Link>}
           <button className="btn" onClick={() => setRetry((v) => v + 1)}>
             Retry
           </button>

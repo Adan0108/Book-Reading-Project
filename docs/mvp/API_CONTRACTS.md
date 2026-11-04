@@ -37,4 +37,18 @@ The server derives `imageAssetIds` in document traversal order. If the caller al
 
 Chapter responses return `contentDocument: null` for legacy chapters and retain `contentMarkdown` and `images`. Consumers render the structured document when present; otherwise they use legacy Markdown and ordered pages. No automatic conversion occurs. See [architecture and rollback trade-offs](../architecture/WRITING_STUDIO.md).
 
-Membership/payment/chat/moderation contracts will be added only when their implementations exist and are verified.
+## Author memberships and posts
+
+Authenticated author routes: `GET /authors/me/tiers`, `PUT /authors/me/tiers/:level` (1 or 2), `GET /authors/me/members?cursor=`, and `GET`/`POST /authors/me/posts`, `PATCH /authors/me/posts/:postId`.
+
+Tier writes accept `{name,description,benefits,available,existingTierId?}`. Pricing/currency is server-controlled. Public `GET /authors/:authorId/tiers` returns only managed tiers offered for sale, with integer `priceCents` and `pricingVersion`. These are offers, not proof of a payment or entitlement.
+
+`GET /membership-policy` requires AUTHOR/ADMIN; `PUT /admin/membership-policy` requires ADMIN and `{version,currency,tierOneName,tierTwoName,tierOneCents,tierTwoCents,tierTwoEnabled,revenueShareBps}`. A stale version returns 409. Changes are transactionally audited.
+
+`GET /memberships/me` returns the caller's membership status, author/tier, renewal state, period end and current `hasAccess`. `POST /memberships/:membershipId/cancel` disables renewal for a caller-owned manual membership without shortening its paid period. Provider-backed cancellation remains 503 until the billing phase.
+
+Publishing accepts optional `requiredTierIds` on books/chapters. TIERS requires owned tier relationships. Omission preserves an existing selection. Parent-book and child-chapter restrictions both apply. Tier 2 includes tier 1 only for the same author; unmapped legacy tiers retain exact matching.
+
+Post writes accept `{title,body,visibility,isDraft,minimumTierId?}`. Optional-auth `GET /authors/:authorId/posts?cursor=` returns published teasers with `isLocked`; protected bodies are omitted. `GET /authors/:authorId/posts/:postId` returns a body only after authorization. All `/v1/api` HTTP responses use `Cache-Control: no-store`; internal caches remain behind fresh access checks.
+
+Payment/chat/moderation contracts will be added when implemented and verified.

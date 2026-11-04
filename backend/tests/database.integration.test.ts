@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { randomUUID } from 'crypto';
+import {configureQaEnvironment} from './qa-environment';
 // Explicit opt-in and a dedicated schema. Never point these tests at an existing user database.
 const enabled = process.env.PUBLISHING_TEST_DATABASE === 'publishing_qa';
 describe.skipIf(!enabled)('real MySQL publishing lifecycle', () => {
@@ -10,8 +11,7 @@ describe.skipIf(!enabled)('real MySQL publishing lifecycle', () => {
   const assetIds = [randomUUID(),randomUUID(),randomUUID()];
   const requestId = randomUUID();
   beforeAll(async () => {
-    process.env.MYSQL_HOST = '127.0.0.1'; process.env.MYSQL_PORT = '3307';
-    process.env.MYSQL_USER = 'root'; process.env.MYSQL_PASSWORD = 'publishing-qa-local'; process.env.MYSQL_DB = 'publishing_qa';
+    configureQaEnvironment();
     ({ pool } = await import('../src/dbs/init.mysql'));
     const { runMigrationsOnce } = await import('../src/dbs/migrate');
     await runMigrationsOnce(); await runMigrationsOnce();

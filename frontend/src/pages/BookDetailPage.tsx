@@ -101,6 +101,7 @@ const BookDetailPage = () => {
                                     <FiUser className="text-yellow-500" />
                                     {currentBook.authorProfile?.penName || 'Tác giả chưa cập nhật'}
                                 </Link>
+                                {currentBook.authorProfile?.id&&<Link className="btn btn-sm mt-3" to={`/author/${currentBook.authorProfile.id}/memberships`}>Membership plans</Link>}
 
                                 <span className="flex items-center gap-2">
                                     <FiList className="text-yellow-500" />

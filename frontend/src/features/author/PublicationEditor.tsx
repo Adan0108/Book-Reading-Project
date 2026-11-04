@@ -21,6 +21,7 @@ import {
 } from "../studio/document";
 import { useDraftAutosave } from "../studio/useDraftAutosave";
 import { isAxiosError } from "axios";
+import type { AuthorTier } from "../membership/types";
 const NovelStudio = lazy(() => import("../studio/NovelStudio"));
 
 interface Form {
@@ -64,6 +65,11 @@ export default function PublicationEditor({
     kind === "chapter" && !edit ? emptyDocument() : null,
   );
   const [bookTitle, setBookTitle] = useState("");
+  const [bookVisibility, setBookVisibility] = useState("PUBLIC");
+  const [tierOptions, setTierOptions] = useState<AuthorTier[]>([]);
+  const [tierError, setTierError] = useState("");
+  const [requiredTierIds, setRequiredTierIds] = useState<number[]>([]);
+  const tierChanged = useRef(false);
   const [loading, setLoading] = useState(edit || kind === "chapter");
   const [loadFailed, setLoadFailed] = useState(false);
   const [error, setError] = useState("");
@@ -94,6 +100,20 @@ export default function PublicationEditor({
     media.current = images;
   }, [images]);
   useEffect(() => () => media.current.forEach(releaseImage), []);
+  useEffect(() => {
+    let active = true;
+    publicationService
+      .getTiers()
+      .then((tiers) => {
+        if (active) setTierOptions(tiers);
+      })
+      .catch((e: unknown) => {
+        if (active) setTierError(message(e));
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
   useDraftAutosave(
     () => save("DRAFT", true),
     kind === "chapter" &&
@@ -120,6 +140,8 @@ export default function PublicationEditor({
       media.current = [];
       setImages([]);
       setForm(empty);
+      setRequiredTierIds([]);
+      tierChanged.current = false;
       setDocument(kind === "chapter" && !edit ? emptyDocument() : null);
       setDirty(false);
       setProgress("");
@@ -137,7 +159,9 @@ export default function PublicationEditor({
             : b;
         if (cancelled) return;
         setBookTitle(b.title);
+        setBookVisibility(b.visibility ?? "PUBLIC");
         if (edit) {
+          setRequiredTierIds(data.requiredTierIds ?? []);
           setForm({
             title: data.title,
             genre: data.genre ?? "",
@@ -267,6 +291,12 @@ export default function PublicationEditor({
   }
   async function save(status: string, automatic = false) {
     if (lock.current) return;
+    if (form.visibility === "TIERS" && !requiredTierIds.length) {
+      setError(
+        "Choose a required membership tier. Configure your plans under Memberships first.",
+      );
+      return;
+    }
     if (!form.title.trim() || (kind === "book" && !form.genre.trim())) {
       setError("Enter a title" + (kind === "book" ? " and genre." : "."));
       return;
@@ -307,6 +337,7 @@ export default function PublicationEditor({
             `Uploading images: ${done} / ${total} (${total ? Math.round((done / total) * 100) : 100}%)`,
           ),
       );
+      const tierPatch = !edit || tierChanged.current ? { requiredTierIds } : {};
       const data =
         kind === "book"
           ? {
@@ -314,6 +345,7 @@ export default function PublicationEditor({
               genre: form.genre.trim(),
               synopsis: form.synopsis,
               visibility: form.visibility,
+              ...tierPatch,
               status,
               tags: form.tags
                 .split(",")
@@ -338,6 +370,7 @@ export default function PublicationEditor({
                   }
                 : { contentMd: form.contentMd }),
               visibility: form.visibility,
+              ...tierPatch,
               isDraft: status === "DRAFT",
               imageAssetIds: ids,
             };
@@ -368,7 +401,10 @@ export default function PublicationEditor({
         edit || Boolean(recoveredEndpoint.current),
         { ...data, requestId: request.current.id },
       );
-      if (revision.current === snapshot) setDirty(false);
+      if (revision.current === snapshot) {
+        setDirty(false);
+        tierChanged.current = false;
+      }
       setForm((f) => ({ ...f, status }));
       setProgress(
         status === "PUBLISHED"
@@ -503,6 +539,59 @@ export default function PublicationEditor({
                   <option value="TIERS">Membership tiers</option>
                 </select>
               </label>
+              {kind === "chapter" && bookVisibility !== "PUBLIC" && (
+                <p className="text-sm">
+                  This book requires{" "}
+                  {bookVisibility === "TIERS"
+                    ? "a qualifying membership tier"
+                    : "an active membership"}
+                  . Chapter settings can further restrict access.
+                </p>
+              )}
+              {form.visibility === "TIERS" && (
+                <label className="block">
+                  Minimum membership tier
+                  <select
+                    aria-label="Minimum membership tier"
+                    className="select select-bordered w-full"
+                    value={
+                      requiredTierIds.length > 1
+                        ? "custom"
+                        : (requiredTierIds[0] ?? "")
+                    }
+                    required
+                    onChange={(event) => {
+                      setRequiredTierIds(
+                        event.target.value ? [Number(event.target.value)] : [],
+                      );
+                      tierChanged.current = true;
+                      revision.current++;
+                      setDirty(true);
+                      setError("");
+                    }}
+                  >
+                    <option value="">Choose a tier</option>
+                    {requiredTierIds.length > 1 && (
+                      <option value="custom" disabled>
+                        Existing selection ({requiredTierIds.length} tiers)
+                      </option>
+                    )}
+                    {tierOptions.map((tier) => (
+                      <option key={tier.id} value={tier.id}>
+                        {tier.name}
+                        {tier.level ? ` · Tier ${tier.level}` : ""}
+                      </option>
+                    ))}
+                  </select>
+                  <span className="text-sm">
+                    Tier 2 includes tier 1 content.{" "}
+                    <Link to="/author/memberships" className="link">
+                      Manage plans
+                    </Link>
+                  </span>
+                  {tierError && <span role="alert">{tierError}</span>}
+                </label>
+              )}
               {(kind === "book" || !document) && (
                 <ImageEditor
                   images={images}

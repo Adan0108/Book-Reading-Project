@@ -20,7 +20,7 @@ export default function AdminApplicationsPage(){
     catch(e){setError(message(e));}finally{setBusy(false);}
   }
   return <main className="max-w-5xl mx-auto p-6 space-y-6">
-    <Link to="/">← HiBook</Link><h1 className="text-3xl font-bold">Author applications</h1>
+    <nav className="flex gap-5"><Link to="/">← HiBook</Link><Link to="/admin/membership-policy">Membership policy</Link></nav><h1 className="text-3xl font-bold">Author applications</h1>
     {error&&<p role="alert" className="text-red-700">{error}</p>}
     {loading?<p role="status">Loading applications…</p>:items.length===0?<p>No pending applications.</p>:
       <ul className="space-y-3">{items.map(item=><li key={item.id} className="border rounded-xl p-4 flex justify-between gap-4"><span>{item.applicationTitle} · {item.status}</span><button className="btn" disabled={busy} onClick={()=>inspect(item.id)}>Review application {item.id}</button></li>)}</ul>}

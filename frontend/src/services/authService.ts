@@ -1,5 +1,6 @@
 import api from "../lib/axios";
 import {isAxiosError} from 'axios';
+import type {AuthState} from '../type/store';
 
 export const authService = {
     signUp: async (email: string) => {
@@ -54,7 +55,7 @@ export const authService = {
     },
 
     fetchMe : async () => {
-        const res = await api.get('/user/me', { withCredentials: true });
-        return res.data;
+        const res = await api.get<{metadata:NonNullable<AuthState['authUser']>}>('/user/me', { withCredentials: true });
+        return res.data.metadata;
     }
 }

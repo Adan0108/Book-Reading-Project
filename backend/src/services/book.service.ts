@@ -1,12 +1,13 @@
 import { randomUUID } from 'crypto';
 import {getChapterDocument} from '../models/repositories/chapterDocument.repo';
 import { savePublication, getChapterImages } from './publishing.service';
-import { BadRequestError, ForbiddenError, NotFoundError, AuthFailureError } from '../core/error.response';
+import { BadRequestError, ForbiddenError, NotFoundError } from '../core/error.response';
 import * as bookRepo from '../models/repositories/book.repo';
 import * as chapterRepo from '../models/repositories/chapter.repo';
 import * as tagRepo from '../models/repositories/tag.repo';
 import * as authorRepo from '../models/repositories/author.repo';
 import * as membershipRepo from '../models/repositories/membership.repo';
+import {loadEntitlementContext,canReadChapter,assertEntitled} from './entitlement.service';
 import { cacheDel, cacheGetJson, cacheIncr, cacheSetJson,cacheSetNx } from '../utils/cache';
 
 const BOOK_TTL = 60;      // seconds
@@ -49,6 +50,9 @@ export const getBookDetailBySlug = async (
   viewer?: { viewerUserId?: number; viewerIp?: string }
 ) => {
   if (!slug?.trim()) throw new BadRequestError('slug is required');
+  // Availability is fresh even when descriptive metadata was previously cached.
+  const book = await bookRepo.findBookBySlugPublic(slug);
+  if (!book) throw new NotFoundError('Book not found');
 
   const cacheKey = `book:${slug}`;
   const cached = await cacheGetJson<any>(cacheKey);
@@ -72,13 +76,10 @@ export const getBookDetailBySlug = async (
     return cached;
   }
 
-  const book = await bookRepo.findBookBySlugPublic(slug);
-  if (!book) throw new NotFoundError('Book not found');
-
   const tags = await bookRepo.getBookTags(book.id);
   const chapters = await chapterRepo.listChapterHeadersByBook(book.id);
 
-  const hasFreeChapters = chapters.some((c: any) => c.visibility === 'PUBLIC' && c.isPublished === 1);
+  const hasFreeChapters = book.visibility==='PUBLIC'&&chapters.some((c: any) => c.visibility === 'PUBLIC' && c.isPublished === 1);
   const hasMembersOnlyChapters = chapters.some((c: any) => c.visibility !== 'PUBLIC' && c.isPublished === 1);
 
   const baseViews = Number((book as any).views_count ?? 0);
@@ -112,38 +113,24 @@ export const listChapterHeaders = async (slug: string, viewerUserId?: number) =>
 
   const headers = await chapterRepo.listChapterHeadersByBook(book.id);
 
-  // convenience hint: locked for viewer
-  let membership: any = null;
-  if (viewerUserId) membership = await membershipRepo.getActiveMembership(viewerUserId, book.author_id);
-
-  const tierId = membership?.tier_id;
-
-  const items = [];
-  for (const h of headers) {
-    let isLocked = false;
-
-    if (h.isPublished !== 1) {
-      // Draft/scheduled not available to readers
-      isLocked = true;
-    } else if (h.visibility === 'PUBLIC') {
-      isLocked = false;
-    } else if (!viewerUserId || !membership) {
-      isLocked = true;
-    } else if (h.visibility === 'MEMBERS') {
-      isLocked = false;
-    } else if (h.visibility === 'TIERS') {
-      // Must pass tier access
-      isLocked = !(await membershipRepo.canAccessChapterTier(h.id, book.author_id, tierId));
-    }
-
-    items.push({ ...h, isLockedForCurrentUser: isLocked });
-  }
+  const [context,bookRules,chapterRules]=await Promise.all([
+    loadEntitlementContext(viewerUserId,Number(book.author_id)),
+    membershipRepo.getTierRules('book',book.id,book.author_id),
+    membershipRepo.getChapterTierRules(book.id,book.author_id),
+  ]);
+  const items=headers.map(h=>({
+    ...h,
+    isLockedForCurrentUser:!canReadChapter(context,
+      {visibility:book.visibility,rules:bookRules},
+      {released:Number(h.isPublished)===1,visibility:h.visibility,rules:chapterRules.get(Number(h.id))??[]},
+    ).allowed,
+  }));
 
   return { bookId: book.id, slug, items };
 };
 
 export const getChapterContent = async (slug: string, chapterIndex: number, viewerUserId?: number) => {
-  if (!Number.isFinite(chapterIndex) || chapterIndex <= 0) throw new BadRequestError('index must be a positive integer');
+  if (!Number.isSafeInteger(chapterIndex) || chapterIndex <= 0) throw new BadRequestError('index must be a positive integer');
 
   const book = await bookRepo.findBookBySlugPublic(slug);
   if (!book) throw new NotFoundError('Book not found');
@@ -155,18 +142,15 @@ export const getChapterContent = async (slug: string, chapterIndex: number, view
   if (chapter.is_draft === 1 || !chapter.published_at || !chapter.release_ready) {
     throw new NotFoundError('Chapter not available');
   }
-  // membership gating
-  if (chapter.visibility !== 'PUBLIC') {
-    if (!viewerUserId) throw new AuthFailureError('Login required');
-
-    const membership = await membershipRepo.getActiveMembership(viewerUserId, book.author_id);
-    if (!membership) throw new ForbiddenError('Membership required');
-
-    if (chapter.visibility === 'TIERS') {
-      const ok = await membershipRepo.canAccessChapterTier(chapter.id, book.author_id, membership.tier_id);
-      if (!ok) throw new ForbiddenError('Tier access required');
-    }
-  }
+  const [context,bookRules,chapterRules]=await Promise.all([
+    loadEntitlementContext(viewerUserId,Number(book.author_id)),
+    membershipRepo.getTierRules('book',book.id,book.author_id),
+    membershipRepo.getTierRules('chapter',chapter.id,book.author_id),
+  ]);
+  assertEntitled(canReadChapter(context,
+    {visibility:book.visibility,rules:bookRules},
+    {released:Boolean(chapter.release_ready)&&chapter.is_draft===0,visibility:chapter.visibility,rules:chapterRules},
+  ));
 
   // cache chapter (content)
   const cacheKey = `chapter:${chapter.id}`;
@@ -303,6 +287,7 @@ export const authorGetBookDetail = async (userId: number, bookId: number) => {
     coverUrl: book.cover_image_url,
     visibility: book.visibility,
     status: book.status,
+    requiredTierIds:(await membershipRepo.getTierRules('book',book.id,author.id)).map(t=>t.tierId),
     createdAt: book.created_at,
     updatedAt: book.updated_at,
     tags,
@@ -347,6 +332,7 @@ export const authorGetChapterDetail = async (
     wordCount: chapter.word_count,
     visibility: chapter.visibility,
     isDraft: Boolean(chapter.is_draft),
+    requiredTierIds:(await membershipRepo.getTierRules('chapter',chapter.id,author.id)).map(t=>t.tierId),
     scheduledAt: chapter.scheduled_at,
     publishedAt: chapter.published_at,
     createdAt: chapter.created_at,
