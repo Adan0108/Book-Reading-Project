@@ -176,7 +176,11 @@ export default function ChatPage() {
   const active = conversations?.find((c) => c.id === selected);
   const maySend = canSend && active?.canSend !== false;
   return (
-    <main className="min-h-screen bg-base-200 p-4 md:p-8">
+    <main
+      id="main-content"
+      tabIndex={-1}
+      className="min-h-screen bg-base-200 p-4 md:p-8"
+    >
       <div className="mx-auto max-w-6xl space-y-5">
         <nav className="flex flex-wrap gap-5">
           <Link to="/">← HiBook</Link>

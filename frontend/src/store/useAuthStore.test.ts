@@ -24,6 +24,19 @@ describe("client session async boundaries", () => {
     });
     vi.mocked(authService.logout).mockResolvedValue({});
   });
+  it("retains the saved identity but clears an incompletely restored token after profile outage", async () => {
+    vi.mocked(authService.refreshToken).mockResolvedValue("new-access");
+    vi.mocked(authService.fetchMe).mockRejectedValue({
+      isAxiosError: true,
+      response: { status: 503 },
+    });
+    await expect(useAuthStore.getState().refreshToken()).rejects.toMatchObject({
+      response: { status: 503 },
+    });
+    expect(useAuthStore.getState().accessToken).toBeNull();
+    expect(localStorage.getItem("userId")).toBe("1");
+    expect(useAuthStore.getState().isRefreshingToken).toBe(false);
+  });
   it("does not restore a profile that finishes after logout", async () => {
     let finish!: (
       user: NonNullable<ReturnType<typeof useAuthStore.getState>["authUser"]>,

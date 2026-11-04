@@ -14,8 +14,8 @@ The platform is **not release ready**. This is a living implementation record, s
 | Member chat | MERGED | `feat/member-chat`: `a36e970`; merge `2e64620`; both remotes verified. 87 backend / 12 frontend tests and nine headed journeys at merge. Single-backend-instance delivery; no offline durable composer. |
 | Admin moderation | MERGED | `feat/admin-moderation`: independent visibility flags, reports, account suspension/session revocation, versioned settings/reviews, audit, actual statistics and admin UI. 97 backend / 12 frontend tests and all ten headed journeys passed; delayed-preview focused regression also passed. Types/lint/builds pass. |
 | Reader discovery and library | MERGED | Real catalog, profiles, follows/bookmarks and synchronized reading history; 109 backend / 15 frontend tests and twelve headed journeys pass. Core `bef86b4`, merge `4d9472c`, both remotes verified. Post spoilers/artwork remain a separate milestone. |
-| Operations and API documentation | VERIFIED | Awaited startup, migration locks/checksums, Redis failure boundaries, OpenAPI, non-root application images and fresh Compose verification; 125 backend tests, thirteen headed journeys plus one built-stack journey pass. |
-| UI and release verification | Pending | Integrated journeys, accessibility, responsive browser evidence and final root README |
+| Operations and API documentation | MERGED | `3b8fe99`, merge `74ba157`, both remotes verified. Awaited startup, migration locks/checksums, Redis failure boundaries, OpenAPI, non-root application images and fresh Compose verification; 125 backend tests, thirteen headed journeys plus one built-stack journey pass. |
+| UI and release verification | VERIFIED | 127 backend / 18 frontend tests, fourteen headed journeys, 33 accessibility states and one final built Compose journey pass; final root README and engineering guides complete. Merged-main verification follows integration. |
 
 ## Safety and environment
 

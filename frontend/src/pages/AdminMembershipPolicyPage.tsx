@@ -1,5 +1,5 @@
+import AdminLayout from "../features/admin/AdminLayout";
 import { useEffect, useState, type FormEvent } from "react";
-import { Link } from "react-router-dom";
 import api from "../lib/axios";
 import { decimalCents } from "../lib/money";
 import { message } from "../features/author/images";
@@ -44,10 +44,8 @@ export default function AdminMembershipPolicyPage() {
     }
   }
   return (
-    <main className="min-h-screen bg-base-200 p-6">
+    <AdminLayout title="Membership pricing">
       <div className="max-w-2xl mx-auto space-y-5">
-        <Link to="/admin">← Administration</Link>
-        <h1 className="text-3xl font-bold">Membership policy</h1>
         <p>
           Configure monthly USD prices for new checkout sessions and the
           platform revenue share. Existing provider subscriptions keep their
@@ -150,6 +148,6 @@ export default function AdminMembershipPolicyPage() {
           </form>
         )}
       </div>
-    </main>
+    </AdminLayout>
   );
 }

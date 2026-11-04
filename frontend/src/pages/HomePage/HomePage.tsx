@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import Header from "./Header";
 import StoryCard from "../../features/catalog/StoryCard";
 import type { StorySummary } from "../../features/catalog/types";
 import api from "../../lib/axios";
@@ -81,9 +80,9 @@ export default function HomePage() {
   }
   return (
     <div className="min-h-screen bg-base-200">
-      <Header />
       <main
         id="main-content"
+        tabIndex={-1}
         className="mx-auto max-w-7xl px-4 py-10 space-y-8"
       >
         <header className="max-w-3xl space-y-3">

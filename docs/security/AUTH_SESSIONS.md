@@ -43,3 +43,7 @@ See [test evidence](../mvp/TEST_REPORT.md). SMTP outside the local sink, product
 ## Client response ordering
 
 Client session generations prevent a late profile or refresh response from restoring a logged-out session, and prevent an older request's 401 from clearing a newer login. Account and author guards subscribe to identity changes. Profile verification during restoration skips interceptor refresh; otherwise a 401 can recursively await the same pending restoration promise. Regression tests reproduce all three stale-response races and a headed forced-bootstrap-401 journey verifies termination. These guards manage client state; durable server session checks remain authoritative.
+
+## Final client hydration review
+
+The shared access hook scopes a permission response to its identity and retry attempt. Same-user hydration retains mounted draft state; logout or a different identity removes it before another outlet can use that permission. Parallel API calls now await restoration even after its token arrives, until profile verification finishes. If profile verification fails recoverably, the incomplete in-memory token is cleared while the non-secret saved user ID remains available for retry. Component regressions and the headed profile/session outage journeys passed after reproducing these cases.

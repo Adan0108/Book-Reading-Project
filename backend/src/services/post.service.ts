@@ -159,15 +159,20 @@ export async function savePost(
     return result;
   });
 }
-export async function myPosts(userId: number) {
+export async function myPosts(userId: number, cursorValue?: unknown) {
   const author = await ownedAuthor(userId);
+  const cursor =
+    cursorValue === undefined
+      ? Number.MAX_SAFE_INTEGER
+      : positiveId(cursorValue, "cursor");
   const [items] = await pool.query<RowDataPacket[]>(
-    "SELECT p.id,p.title,p.body,p.visibility,p.minimum_tier_id AS minimumTierId,p.is_draft AS isDraft,COALESCE(d.is_spoiler,0) AS isSpoiler,UNIX_TIMESTAMP(p.published_at) AS publishedEpoch,COALESCE(f.hidden,0) AS moderationHidden,f.reason AS moderationReason FROM author_posts p LEFT JOIN post_details d ON d.post_id=p.id LEFT JOIN moderation_flags f ON f.kind='POST' AND f.resource_id=p.id WHERE p.author_id=? AND p.deleted_at IS NULL ORDER BY p.id DESC LIMIT 100",
-    [author.id],
+    "SELECT p.id,p.title,p.body,p.visibility,p.minimum_tier_id AS minimumTierId,p.is_draft AS isDraft,COALESCE(d.is_spoiler,0) AS isSpoiler,UNIX_TIMESTAMP(p.published_at) AS publishedEpoch,COALESCE(f.hidden,0) AS moderationHidden,f.reason AS moderationReason FROM author_posts p LEFT JOIN post_details d ON d.post_id=p.id LEFT JOIN moderation_flags f ON f.kind='POST' AND f.resource_id=p.id WHERE p.author_id=? AND p.id<? AND p.deleted_at IS NULL ORDER BY p.id DESC LIMIT 51",
+    [author.id, cursor],
   );
-  const images = await postImages(items.map((i) => Number(i.id)));
+  const images = await postImages(items.slice(0, 50).map((i) => Number(i.id)));
   return {
-    items: items.map((row) => ({
+    nextCursor: items.length > 50 ? Number(items[49].id) : null,
+    items: items.slice(0, 50).map((row) => ({
       ...row,
       isDraft: Boolean(row.isDraft),
       isSpoiler: Boolean(row.isSpoiler),
@@ -204,16 +209,14 @@ export async function listPublicPosts(
     WHERE p.author_id=? AND p.id<? AND p.deleted_at IS NULL AND p.is_draft=0 AND p.published_at<=NOW() AND ${notHiddenSql("POST", "p")} ORDER BY p.id DESC LIMIT 21`,
     [authorId, cursor],
   );
-  const items = rows
-    .slice(0, 20)
-    .map((row) => ({
-      row,
-      decision: canViewPost(context, {
-        released: true,
-        visibility: row.visibility as Visibility,
-        rules: postRule(row),
-      }),
-    }));
+  const items = rows.slice(0, 20).map((row) => ({
+    row,
+    decision: canViewPost(context, {
+      released: true,
+      visibility: row.visibility as Visibility,
+      rules: postRule(row),
+    }),
+  }));
   const images = await postImages(
     items.filter((i) => i.decision.allowed).map((i) => Number(i.row.id)),
   );

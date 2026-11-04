@@ -38,7 +38,10 @@ export const cancel = async (req: Request, res: Response) =>
     await membership.cancelMembership(req.user!.uid, req.params.membershipId),
   ).send(res);
 export const myPosts = async (req: Request, res: Response) =>
-  new OK("Your posts", await posts.myPosts(req.user!.uid)).send(res);
+  new OK(
+    "Your posts",
+    await posts.myPosts(req.user!.uid, req.query.cursor),
+  ).send(res);
 export const savePost = async (req: Request, res: Response) =>
   new OK(
     "Post saved",

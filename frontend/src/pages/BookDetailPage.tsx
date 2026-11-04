@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import Header from "./HomePage/Header";
 import api from "../lib/axios";
 import { message } from "../features/author/images";
 import type { StoryDetail } from "../features/catalog/types";
@@ -44,9 +43,9 @@ export default function BookDetailPage() {
   }, [slug, retry]);
   return (
     <div className="min-h-screen bg-base-200">
-      <Header />
       <main
         id="main-content"
+        tabIndex={-1}
         className="max-w-6xl mx-auto p-4 md:p-10 space-y-8"
       >
         <Link className="link" to="/">

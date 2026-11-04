@@ -26,7 +26,7 @@ api.interceptors.request.use(
     let state = useAuthStore.getState();
     // Optional-auth feeds can return 200 guest previews, so restore before the request.
     if (
-      !state.accessToken &&
+      (refreshInFlight || !state.accessToken) &&
       !config.skipAuthRefresh &&
       localStorage.getItem("userId") &&
       !config.url?.startsWith("/access/")
