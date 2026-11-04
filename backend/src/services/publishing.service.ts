@@ -1,4 +1,5 @@
 import { randomUUID, createHash } from 'crypto';
+import {attachable} from '../models/repositories/publishingAsset.repo';
 import {parseNovelDocument,documentSummary} from '../domain/novelDocument';
 import {getChapterDocument,saveChapterDocument} from '../models/repositories/chapterDocument.repo';
 import {setResourceTiers} from '../models/repositories/membership.repo';
@@ -16,7 +17,8 @@ const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{1
 export function validateFile(body: any) {
   if (!Object.prototype.hasOwnProperty.call(formats, body.mimeType) || !Number.isInteger(body.size) || body.size < 1 || body.size > MAX_BYTES)
     throw new BadRequestError('Choose a JPEG, PNG or WebP image up to 10 MB.');
-  if (!['cover', 'chapter'].includes(body.purpose)) throw new BadRequestError('Invalid upload purpose');
+  if (!['cover', 'chapter', 'post'].includes(body.purpose)) throw new BadRequestError('Invalid upload purpose');
+  if (body.purpose === 'post' && body.bookId !== undefined) throw new BadRequestError('Post artwork is author scoped');
   if (body.purpose === 'chapter' && !Number.isSafeInteger(body.bookId)) throw new BadRequestError('Book is required');
   if (body.bookId !== undefined && (!Number.isSafeInteger(body.bookId) || body.bookId < 1)) throw new BadRequestError('Invalid book');
 }
@@ -99,16 +101,6 @@ export async function getChapterImages(chapterId: number, db: any = pool) {
 export function validateAssetIds(ids: any): asserts ids is string[] {
   if (!Array.isArray(ids) || ids.length > MAX_PAGES || ids.some(id => typeof id !== 'string' || !uuid.test(id)) || new Set(ids).size !== ids.length)
     throw new BadRequestError('Choose up to 100 distinct chapter images.');
-}
-async function attachable(db: any, id: string, authorId: number, purpose: string, bookId?: number, chapterId?: number) {
-  if (typeof id !== 'string' || !uuid.test(id)) throw new BadRequestError('Invalid asset ID');
-  const [a] = await rows(db, 'SELECT * FROM publishing_assets WHERE id = ? FOR UPDATE', [id]);
-  if (!a || Number(a.author_id) !== Number(authorId) || a.purpose !== purpose || !a.confirmed_at ||
-      (a.book_id !== null && Number(a.book_id) !== bookId)) throw new ForbiddenError('Image is not authorized for this work');
-  const used = await rows(db, purpose === 'chapter' ? 'SELECT chapter_id AS target FROM chapter_images WHERE asset_id = ?' : 'SELECT book_id AS target FROM book_covers WHERE asset_id = ?', [id]);
-  if (used.length && Number(used[0].target) !== (purpose === 'chapter' ? chapterId : bookId))
-    throw new ForbiddenError('Image is already attached to another work');
-  return a;
 }
 function text(value: any, label: string, required = true) {
   if (typeof value !== 'string' || (required && !value.trim()) || value.length > 255) throw new BadRequestError(`${label} is required (maximum 255 characters)`);

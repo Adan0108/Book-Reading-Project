@@ -94,3 +94,9 @@ Public `GET /books` accepts `query`, `genre`, `tag`, `sort` (recent/popular/upda
 Authenticated routes: `GET`/`PATCH /user/me/profile`; `PUT /authors/:id/follow` with `{following}`; `PUT /library/bookmarks/:id` with `{bookmarked}`; `GET /library/books/:id`; `GET /library/bookmarks`, `/library/follows`, `/library/history` with optional cursor; `POST /library/history` with `{chapterId,progress}` (integer 0–100); and `DELETE /library/history/:id`. Identity always comes from verified authentication. Library pages contain at most 50 items and a nullable nextCursor. Unavailable entries redact former public metadata but remain removable.
 
 Approved authors use `GET`/`PATCH /authors/me/profile` with `{penName,bio}` and `GET /authors/me/analytics`. Account profile changes whitelist username, nickname, bio and isPrivate; email and roles cannot be changed there. Partial updates preserve omitted fields. Username conflicts return 409. See [privacy and cursor policy](../architecture/READER_LIBRARY.md).
+
+## Post spoilers and artwork
+
+Existing author post writes additionally accept `{isSpoiler,imageAssetIds,requestId}`. Image references are ordered, distinct, confirmed, author-owned assets with purpose `post`, at most eight. Omission preserves existing references and spoiler state on edit. Published posts require text. UUID save keys provide transactionally recorded replay and return 409 for conflicting reuse.
+
+Upload authorization accepts purpose `post` without bookId and uses the same signed image policy and confirmation endpoint. Author management and entitled public responses add `{isSpoiler,images:[{id,imageUrl,pageOrder}]}`. Locked teasers expose the spoiler flag but omit both body and images. Admin post previews include ordered artwork. See [post design and delivery limitations](../architecture/AUTHOR_POSTS.md).

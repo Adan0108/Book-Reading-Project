@@ -20,6 +20,7 @@ import {
 } from "../domain/validation";
 import { isActiveAdmin } from "../models/repositories/membership.repo";
 import * as repository from "../models/repositories/moderation.repo";
+import {postImages} from '../models/repositories/publishingAsset.repo';
 import {
   publicBookSql,
   releasedChapterSql,
@@ -210,7 +211,7 @@ export async function contentDetail(kindValue: unknown, idValue: unknown) {
     kind,
     id,
     contentDocument: kind === "CHAPTER" ? await getChapterDocument(id) : null,
-    images: kind === "CHAPTER" ? await getChapterImages(id) : [],
+    images: kind === "CHAPTER" ? await getChapterImages(id) : kind === 'POST'?await postImages([id]):[],
   };
 }
 export async function setContentHidden(
