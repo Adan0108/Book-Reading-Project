@@ -9,6 +9,7 @@ import uploadRouter from "./upload";
 import membershipsRouter from './memberships';
 import chatRouter from './chat';
 import adminModerationRouter from './adminModeration';
+import readerRouter from './reader';
 
 const router = Router();
 // Authorizations are reevaluated per request; shared HTTP caches must not replay member content.
@@ -29,5 +30,6 @@ router.use("/v1/api", uploadRouter);
 router.use('/v1/api',membershipsRouter);
 router.use('/v1/api',chatRouter);
 router.use('/v1/api',adminModerationRouter);
+router.use('/v1/api',readerRouter);
 
 export default router;

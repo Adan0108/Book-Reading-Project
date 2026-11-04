@@ -27,6 +27,7 @@ api.interceptors.request.use(
     // Optional-auth feeds can return 200 guest previews, so restore before the request.
     if (
       !state.accessToken &&
+      !config.skipAuthRefresh &&
       localStorage.getItem("userId") &&
       !config.url?.startsWith("/access/")
     ) {
@@ -72,6 +73,7 @@ api.interceptors.response.use(
       error.response?.status === 401 &&
       originalRequest &&
       !originalRequest._retry &&
+      !originalRequest.skipAuthRefresh &&
       !publicAuthOperation &&
       knownUser
     ) {

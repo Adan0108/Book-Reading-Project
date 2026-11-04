@@ -1,5 +1,5 @@
 import AdminLayout from "../features/admin/AdminLayout";
-import { useAdminResource } from "../features/admin/useAdminResource";
+import { useApiResource } from "../lib/useApiResource";
 import { money } from "../lib/money";
 interface Reconciliation {
   totals: {
@@ -18,7 +18,7 @@ interface Reconciliation {
   }[];
 }
 export default function AdminReconciliationPage() {
-  const resource = useAdminResource<Reconciliation>(
+  const resource = useApiResource<Reconciliation>(
       "/admin/payments/reconciliation",
     ),
     data = resource.data;

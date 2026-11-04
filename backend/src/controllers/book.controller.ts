@@ -3,11 +3,7 @@ import { SuccessResponse } from '../core/success.response';
 import * as bookService from '../services/book.service';
 
 export const listBooks = async (req: Request, res: Response) => {
-  const data = await bookService.listBooksPublic({
-    query: req.query.query as any,
-    page: req.query.page as any,
-    limit: req.query.limit as any,
-  });
+  const data = await bookService.listBooksPublic(req.query);
 
   new SuccessResponse({ message: 'OK', metadata: data }).send(res);
 };

@@ -1,8 +1,8 @@
 import AdminLayout from "../features/admin/AdminLayout";
-import { useAdminResource } from "../features/admin/useAdminResource";
+import { useApiResource } from "../lib/useApiResource";
 import { money } from "../lib/money";
 export default function AdminDashboardPage() {
-  const resource = useAdminResource<Record<string, number>>("/admin/dashboard");
+  const resource = useApiResource<Record<string, number>>("/admin/dashboard");
   const stats = resource.data;
   return (
     <AdminLayout title="Administration">

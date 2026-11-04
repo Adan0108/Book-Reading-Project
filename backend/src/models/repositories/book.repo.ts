@@ -94,14 +94,19 @@ export const findBookBySlugPublic = async (slug: string) => {
 
 export const listBooksPublic = async (params: {
   query?: string;
+  genre?:string;
+  tag?:string;
+  sort?:'recent'|'popular'|'updated';
   page: number;
   limit: number;
 }) => {
-  const { query, page, limit } = params;
+  const { query, page, limit,genre,tag,sort='recent' } = params;
   const offset = (page - 1) * limit;
 
   const where: string[] = [publicBookSql('b')];
   const binds: any[] = [];
+  if(genre){where.push('b.genre=?');binds.push(genre);}
+  if(tag){where.push('EXISTS(SELECT 1 FROM book_tags fbt JOIN tags ft ON ft.id=fbt.tag_id WHERE fbt.book_id=b.id AND ft.slug=?)');binds.push(tag);}
 
   if (query?.trim()) {
     where.push(`(
@@ -119,7 +124,7 @@ export const listBooksPublic = async (params: {
   }
 
   const [rows] = await pool.query(
-    `SELECT b.id, b.slug, b.title, b.synopsis, b.cover_image_url AS coverUrl,
+    `SELECT b.id, b.slug, b.title, b.synopsis,b.genre,b.author_id AS authorId,b.visibility, b.cover_image_url AS coverUrl,
             b.views_count AS viewsCount,
             a.pen_name AS authorName,
             (SELECT COUNT(*) FROM chapters c WHERE c.book_id = b.id AND ${releasedChapterSql('c')}) AS totalChapters,
@@ -127,7 +132,7 @@ export const listBooksPublic = async (params: {
      FROM books b
      JOIN authors a ON a.id = b.author_id
      WHERE ${where.join(' AND ')}
-     ORDER BY b.created_at DESC
+     ORDER BY ${sort==='popular'?'b.views_count':sort==='updated'?'b.updated_at':'b.created_at'} DESC,b.id DESC
      LIMIT ? OFFSET ?`,
     [...binds, limit, offset],
   );
@@ -196,7 +201,7 @@ export const listBooksByAuthorPublic = async (params: {
 
   const [rows] = await pool.query(
     `SELECT b.id, b.slug, b.title, b.synopsis, b.cover_image_url AS coverUrl,
-            b.visibility,
+            b.visibility,b.genre,b.author_id AS authorId,b.views_count AS viewsCount,
             a.pen_name AS authorName,
             (SELECT COUNT(*)
              FROM chapters c
@@ -212,7 +217,7 @@ export const listBooksByAuthorPublic = async (params: {
      FROM books b
      JOIN authors a ON a.id = b.author_id
      WHERE ${where.join(' AND ')}
-     ORDER BY b.created_at DESC
+     ORDER BY b.created_at DESC,b.id DESC
      LIMIT ? OFFSET ?`,
     [...binds, limit, offset],
   );

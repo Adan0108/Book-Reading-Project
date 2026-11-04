@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import AdminLayout from "../features/admin/AdminLayout";
-import { useAdminResource } from "../features/admin/useAdminResource";
+import { useApiResource } from "../lib/useApiResource";
 import api from "../lib/axios";
 import { message } from "../features/author/images";
 interface Report {
@@ -16,7 +16,7 @@ interface Report {
 export default function AdminReportsPage() {
   const [params, setParams] = useSearchParams(),
     filter = params.get("status") ?? "OPEN",
-    resource = useAdminResource<{ items: Report[]; nextCursor: number | null }>(
+    resource = useApiResource<{ items: Report[]; nextCursor: number | null }>(
       `/admin/reports?${new URLSearchParams({ ...Object.fromEntries(params), status: filter })}`,
     );
   const [selected, setSelected] = useState<Report | null>(null),

@@ -1,6 +1,6 @@
 import Markdown from "react-markdown";
 import { useEffect, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams,useSearchParams } from "react-router-dom";
 import api from "../lib/axios";
 import { useThemeStore } from "../store/useThemeStore";
 import type { BookDetail, Chapter } from "../type/book";
@@ -9,6 +9,7 @@ import { useReaderPreferences } from "../features/reader/useReaderPreferences";
 import { message } from "../features/author/images";
 import "../features/reader/reader.css";
 import ReportContent from '../features/moderation/ReportContent';
+import {useReadingHistory} from '../features/reader/useReadingHistory';
 
 interface Header {
   id: number;
@@ -19,6 +20,7 @@ interface Header {
 export default function ChapterReadingPage() {
   const { slug, chapterNo } = useParams(),
     navigate = useNavigate();
+  const [searchParams]=useSearchParams();
   const isDark = useThemeStore((s) => s.isDark);
   const { preferences, setPreferences } = useReaderPreferences(isDark);
   const [chapter, setChapter] = useState<Chapter | null>(null),
@@ -28,6 +30,7 @@ export default function ChapterReadingPage() {
     [error, setError] = useState(""),
     [progress, setProgress] = useState(0),
     [retry, setRetry] = useState(0);
+  const historyStatus=useReadingHistory(chapter?.id,progress);
   useEffect(() => {
     let active = true;
     setLoading(true);
@@ -57,8 +60,10 @@ export default function ChapterReadingPage() {
     const key = "hibook.reader.progress.v1",
       identity = `${slug}:${chapterNo}`;
     let restored = 0;
+    const resume=Number(searchParams.get('resume'));
+    if(searchParams.has('resume')&&Number.isFinite(resume)&&resume>=0&&resume<=100)restored=resume/100;
     try {
-      restored =
+      if(!searchParams.has('resume'))restored =
         JSON.parse(localStorage.getItem(key) || "{}")[identity]?.position ?? 0;
     } catch {
       /* Optional local preference. */
@@ -107,7 +112,7 @@ export default function ChapterReadingPage() {
       window.removeEventListener("scroll", update);
       window.removeEventListener("resize", update);
     };
-  }, [chapter, slug, chapterNo]);
+  }, [chapter, slug, chapterNo,searchParams]);
   const position = headers.findIndex((h) => h.index === chapter?.index),
     previous = position > 0 ? headers[position - 1] : null,
     next = position >= 0 ? headers[position + 1] : null;
@@ -242,6 +247,7 @@ export default function ChapterReadingPage() {
               )}
             </nav>
             <ReportContent kind="CHAPTER" resourceId={chapter.id}/>
+            {historyStatus&&<p className="text-sm" role="note">{historyStatus}</p>}
           </article>
         </>
       )}

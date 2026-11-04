@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import AdminLayout from "../features/admin/AdminLayout";
-import { useAdminResource } from "../features/admin/useAdminResource";
+import { useApiResource } from "../lib/useApiResource";
 import api from "../lib/axios";
 import { message } from "../features/author/images";
 interface Policy {
@@ -9,7 +9,7 @@ interface Policy {
   version: number;
 }
 export default function AdminSettingsPage() {
-  const resource = useAdminResource<Policy>("/admin/moderation-policy"),
+  const resource = useApiResource<Policy>("/admin/moderation-policy"),
     [policy, setPolicy] = useState<Policy | null>(null),
     [reason, setReason] = useState(""),
     [error, setError] = useState(""),

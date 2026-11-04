@@ -15,9 +15,9 @@ States: NOT STARTED, IN PROGRESS, BLOCKED, COMPLETED, VERIFIED, MERGED. A passin
 | Payment adapter and sandbox evidence | MERGED | `payments/`, billing migrations/routes, plans, checkout/status/history UI; signed SDK fixtures and real MySQL | `8921b5a`, merge `1359447`; 78 backend / 12 frontend tests and eight headed journeys at merge. Live Stripe sandbox UNVERIFIED without credentials. |
 | Donations | MERGED | Server-validated USD checkout, ledger/splits/refunds, reader and author history UI | `8921b5a`, merge `1359447`; fixture end-to-end passed; no real financial transactions |
 | Member chat | MERGED | `chat/`, conversation repository, routes/migration, `features/chat/`, ChatPage | `a36e970`, merge `2e64620`; 87 backend / 12 frontend tests and nine headed journeys at merge |
-| Admin moderation | VERIFIED | `moderation.service.ts`, target/public-visibility repositories, migration/routes, shared admin UI, reports and author notices | 97 backend / 12 frontend tests and all ten headed journeys passed; delayed-preview regression passed |
-| Search/discovery | IN PROGRESS | Search API exists | Real home catalog, stable validation/pagination and journeys |
-| Profiles and library | IN PROGRESS | Existing partial profile/detail pages | Author data, follows/bookmarks/history/posts |
+| Admin moderation | MERGED | `moderation.service.ts`, target/public-visibility repositories, migration/routes, shared admin UI, reports and author notices | `8392429`, merge `abaac79`; 97 backend / 12 frontend tests and all ten headed journeys passed; delayed-preview regression passed |
+| Search/discovery | VERIFIED | Actual catalog, genre/tag filters, stable bounded pagination, real author profiles | Headed discovery and privacy regression passes |
+| Profiles and library | VERIFIED | Scoped account/public author profiles, follows/bookmarks/history and actual author analytics | Posts still need spoilers and optional artwork |
 | Redis | IN PROGRESS | Cache, OTP, JTI and auth rates | Failure handling, cache availability checks and operational review |
 | OpenAPI | IN PROGRESS | Existing incomplete Swagger | Update implemented contracts; later modules as delivered |
 | Docker deployment | NOT STARTED | Existing infrastructure-only compose | App images, readiness and isolated startup verification |

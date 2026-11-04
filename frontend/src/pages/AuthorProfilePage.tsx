@@ -1,129 +1,190 @@
-import { useEffect } from 'react';
-import { Link,useParams, useNavigate } from 'react-router-dom';
-import { useBookStore } from '../store/useBookStore';
-import { useThemeStore } from '../store/useThemeStore';
-import { FiUser, FiBook, FiList } from 'react-icons/fi';
-
-const AuthorProfilePage = () => {
-    // Get the ID from the URL
-    const { authorId } = useParams<{ authorId: string }>();
-    const navigate = useNavigate();
-    const { isDark } = useThemeStore();
-
-    // Pull our data and functions from the store
-    const { books, isLoadingBooks, fetchAuthorBooks } = useBookStore();
-
-    // Fetch the books when the page loads
-    useEffect(() => {
-        if (authorId) {
-            const id = parseInt(authorId, 10);
-            fetchAuthorBooks(id, { limit: 20 });
+import { useEffect, useState } from "react";
+import { Link, useParams, useSearchParams } from "react-router-dom";
+import api from "../lib/axios";
+import { message } from "../features/author/images";
+import { useAuthStore } from "../store/useAuthStore";
+import Header from "./HomePage/Header";
+import StoryCard from "../features/catalog/StoryCard";
+import type { PublicAuthor, StorySummary } from "../features/catalog/types";
+export default function AuthorProfilePage() {
+  const { authorId } = useParams(),
+    [params, setParams] = useSearchParams(),
+    userId = useAuthStore((s) => s.authUser?.id),
+    [author, setAuthor] = useState<PublicAuthor | null>(null),
+    [books, setBooks] = useState<{
+      items: StorySummary[];
+      page: number;
+      limit: number;
+      total: number;
+    } | null>(null),
+    [error, setError] = useState(""),
+    [loading, setLoading] = useState(true),
+    [busy, setBusy] = useState(false),
+    [retry, setRetry] = useState(0);
+  useEffect(() => {
+    const controller = new AbortController();
+    setLoading(true);
+    setError("");
+    void Promise.all([
+      api.get(`/authors/${authorId}/profile`, { signal: controller.signal }),
+      api.get(`/books/${authorId}/books`, {
+        params: { page: params.get("page") || 1, limit: 12 },
+        signal: controller.signal,
+      }),
+    ])
+      .then(([profile, list]) => {
+        if (!controller.signal.aborted) {
+          setAuthor(profile.data.metadata);
+          setBooks(list.data.metadata);
         }
-    }, [authorId, fetchAuthorBooks]);
-
-    // --- LOADING STATE ---
-    if (isLoadingBooks) {
-        return (
-            <div className={`min-h-screen pt-24 flex justify-center ${isDark ? 'bg-gray-950 text-white' : 'bg-gray-50 text-gray-900'}`}>
-                <div className="animate-pulse flex flex-col items-center">
-                    <div className="h-16 w-16 bg-gray-400 rounded-full mb-4"></div>
-                    <div className="h-4 w-32 bg-gray-400 rounded mb-8"></div>
-                    {/* Skeleton Grid */}
-                    <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-6">
-                        {[1, 2, 3, 4, 5].map(n => (
-                            <div key={n} className="w-40 h-60 bg-gray-400 rounded-lg"></div>
-                        ))}
-                    </div>
-                </div>
-            </div>
-        )
+      })
+      .catch((e: unknown) => {
+        if (!controller.signal.aborted) {
+          setAuthor(null);
+          setError(message(e));
+        }
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setLoading(false);
+      });
+    return () => controller.abort();
+  }, [authorId, params, userId, retry]);
+  async function follow() {
+    if (!author || busy) return;
+    setBusy(true);
+    try {
+      await api.put(`/authors/${author.id}/follow`, {
+        followed: !author.isFollowing,
+      });
+      const { data } = await api.get(`/authors/${author.id}/profile`);
+      setAuthor(data.metadata);
+      setError("");
+    } catch (e) {
+      setError(message(e));
+    } finally {
+      setBusy(false);
     }
-
-    // Extract the author's name from the first book if available!
-    const authorNameDisplay = books.length > 0 && books[0].authorName 
-        ? books[0].authorName 
-        : `Tác giả #${authorId}`;
-
-    return (
-        <div className={`min-h-screen pb-20 pt-24 ${isDark ? 'bg-gray-950 text-gray-200' : 'bg-gray-50 text-gray-800'}`}>
-            <div className="container mx-auto px-4 max-w-6xl">
-
-                {/* AUTHOR HEADER */}
-                <nav className="flex flex-wrap gap-5 mb-6"><Link className="link" to={`/author/${authorId}/memberships`}>Membership plans</Link><Link className="link" to={`/author/${authorId}/posts`}>Author posts</Link><Link className="link" to={`/author/${authorId}/donate`}>Donate</Link><Link className="link" to={`/account/messages?author=${authorId}`}>Member chat</Link></nav>
-                <div className={`flex flex-col items-center md:flex-row md:items-start gap-6 p-8 rounded-2xl mb-10 shadow-sm
-                    ${isDark ? 'bg-gray-900 border border-gray-800' : 'bg-white border border-gray-200'}`}
+  }
+  return (
+    <div className="min-h-screen bg-base-200">
+      <Header />
+      <main
+        id="main-content"
+        className="mx-auto max-w-6xl p-4 md:p-10 space-y-8"
+      >
+        <Link className="link" to="/">
+          ← Browse stories
+        </Link>
+        {error && (
+          <p role="alert" className="alert alert-error">
+            {error}{" "}
+            <button
+              className="btn btn-sm"
+              onClick={() => setRetry((v) => v + 1)}
+            >
+              Retry author
+            </button>
+          </p>
+        )}
+        {loading ? (
+          <p role="status">Loading author…</p>
+        ) : (
+          author && (
+            <>
+              <section className="card bg-base-100 p-6 md:p-8 space-y-5">
+                <p className="text-sm uppercase font-semibold tracking-wide text-primary">
+                  Author
+                </p>
+                <h1 className="text-4xl font-bold">{author.penName}</h1>
+                <p className="whitespace-pre-wrap leading-8">
+                  {author.bio || "This author has not added a biography yet."}
+                </p>
+                <p>
+                  {author.bookCount} published stories · {author.followerCount}{" "}
+                  followers
+                </p>
+                <nav
+                  className="flex flex-wrap gap-3"
+                  aria-label="Author actions"
                 >
-
-                    <div className="w-24 h-24 bg-yellow-500 rounded-full flex items-center justify-center text-4xl text-gray-900 shadow-lg flex-shrink-0">
-                        <FiUser />
-                    </div>
-                    <div className="text-center md:text-left">
-                        <h1 className="text-3xl font-black mb-2">{authorNameDisplay}</h1>
-                        <p className={`flex items-center justify-center md:justify-start gap-2 font-medium ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-                            <FiBook /> Tổng số truyện: {books.length}
-                        </p>
-                    </div>
-
-                </div>
-
-                {/* COMIC GRID */}
-                <div className="mb-6 flex items-center justify-between">
-                    <h2 className="text-2xl font-bold flex items-center gap-2">
-                        <span className="w-1 h-6 bg-yellow-500 rounded-full block"></span>
-                        Tác phẩm đã đăng
-                    </h2>
-                </div>
-
-                {books.length === 0 ? (
-
-                    <div className={`text-center py-20 rounded-2xl ${isDark ? 'bg-gray-900/50' : 'bg-white shadow-sm'}`}>
-                        <p className="text-lg opacity-60">Tác giả này chưa có tác phẩm nào được xuất bản.</p>
-                    </div>
-
+                  <Link className="btn" to={`/author/${author.id}/memberships`}>
+                    Membership plans
+                  </Link>
+                  <Link className="btn" to={`/author/${author.id}/posts`}>
+                    Author posts
+                  </Link>
+                  <Link className="btn" to={`/author/${author.id}/donate`}>
+                    Donate
+                  </Link>
+                  <Link
+                    className="btn"
+                    to={`/account/messages?author=${author.id}`}
+                  >
+                    Member chat
+                  </Link>
+                  {author.isOwner ? (
+                    <Link className="btn" to="/author/profile">
+                      Edit author profile
+                    </Link>
+                  ) : userId ? (
+                    <button
+                      className="btn btn-primary"
+                      disabled={busy}
+                      onClick={() => void follow()}
+                    >
+                      {author.isFollowing ? "Unfollow author" : "Follow author"}
+                    </button>
+                  ) : (
+                    <Link className="btn" to="/login">
+                      Sign in to follow
+                    </Link>
+                  )}
+                </nav>
+              </section>
+              <section className="space-y-5">
+                <h2 className="text-2xl font-bold">Published stories</h2>
+                {!books?.items.length ? (
+                  <p className="card bg-base-100 p-6">
+                    No stories have been published yet.
+                  </p>
                 ) : (
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
-
-                        {books.map((book) => (
-                            <div
-                                key={book.id} 
-                                onClick={() => navigate(`/comic/${book.slug}`)}
-                                className={`group cursor-pointer rounded-xl overflow-hidden transition-all duration-300 hover:-translate-y-2 hover:shadow-xl
-                                    ${isDark ? 'bg-gray-900 hover:shadow-yellow-500/10' : 'bg-white hover:shadow-gray-300/50'}`}
-                            >
-
-                                {/* Cover Image */}
-                                <div className="relative aspect-[2/3] overflow-hidden bg-gray-200 dark:bg-gray-800">
-                                    <img 
-                                        src={book.coverUrl || 'https://static.dc.com/sites/default/files/imce/2022/09-SEP/ActionComics1_63180dcb385a45.72864065.jpg'} 
-                                        alt={book.title}
-                                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-                                    />
-                                    {/* Locked Badge if premium */}
-                                    {book.hasMembersChapters && (
-                                        <div className="absolute top-2 right-2 bg-yellow-500 text-black text-xs font-bold px-2 py-1 rounded shadow">
-                                            Premium
-                                        </div>
-                                    )}
-                                </div>
-
-                                {/* Book Info */}
-                                <div className="p-4">
-                                    <h3 className="font-bold text-lg leading-tight mb-2 line-clamp-2 group-hover:text-yellow-500 transition-colors">
-                                        {book.title}
-                                    </h3>
-                                    <div className={`text-xs font-medium flex items-center gap-2 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-                                        <FiList /> {book.totalChapters} Chương
-                                    </div>
-                                </div>
-
-                            </div>
-                        ))}
-
-                    </div>
+                  <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {books.items.map((book) => (
+                      <StoryCard key={book.id} story={book} />
+                    ))}
+                  </div>
                 )}
-            </div>
-        </div>
-    )
+                {books && books.total > books.limit && (
+                  <nav
+                    aria-label="Author story pages"
+                    className="flex items-center gap-4"
+                  >
+                    <button
+                      className="btn"
+                      disabled={books.page <= 1}
+                      onClick={() =>
+                        setParams({ page: String(books.page - 1) })
+                      }
+                    >
+                      Previous page
+                    </button>
+                    <span>Page {books.page}</span>
+                    <button
+                      className="btn"
+                      disabled={books.page * books.limit >= books.total}
+                      onClick={() =>
+                        setParams({ page: String(books.page + 1) })
+                      }
+                    >
+                      Next page
+                    </button>
+                  </nav>
+                )}
+              </section>
+            </>
+          )
+        )}
+      </main>
+    </div>
+  );
 }
-
-export default AuthorProfilePage;

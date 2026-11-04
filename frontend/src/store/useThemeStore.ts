@@ -1,37 +1,29 @@
-import {create} from 'zustand';
-import {persist} from 'zustand/middleware';
-import type { ThemeState } from '../type/store';
-
+import { create } from "zustand";
+import { persist } from "zustand/middleware";
+import type { ThemeState } from "../type/store";
+function applyTheme(dark: boolean) {
+  if (typeof document === "undefined") return;
+  document.documentElement.classList.toggle("dark", dark);
+  document.documentElement.dataset.theme = dark ? "dark" : "light";
+  document.documentElement.style.colorScheme = dark ? "dark" : "light";
+}
 export const useThemeStore = create<ThemeState>()(
-    persist(
-        (set, get) => ({
-            isDark: false,
-
-            toggleTheme: () => {
-                const newValue = !get().isDark;
-                set({isDark: newValue});
-
-                if (newValue) {
-                    document.documentElement.classList.add('dark');
-                }
-                else {
-                    document.documentElement.classList.remove('dark');
-                }
-            },
-            
-            setTheme: (dark: boolean) => {
-                set({isDark: dark});
-
-                if (dark) {
-                    document.documentElement.classList.add('dark');
-                }
-                else {
-                    document.documentElement.classList.remove('dark');
-                }
-            }
-        }),
-        {
-            name: 'theme-storage',
-        }
-    )
-)
+  persist(
+    (set, get) => ({
+      isDark: false,
+      toggleTheme: () => {
+        const isDark = !get().isDark;
+        set({ isDark });
+        applyTheme(isDark);
+      },
+      setTheme: (isDark) => {
+        set({ isDark });
+        applyTheme(isDark);
+      },
+    }),
+    {
+      name: "theme-storage",
+      onRehydrateStorage: () => (state) => applyTheme(state?.isDark ?? false),
+    },
+  ),
+);

@@ -10,6 +10,8 @@ import * as membershipRepo from '../models/repositories/membership.repo';
 import {loadEntitlementContext,canReadChapter,assertEntitled} from './entitlement.service';
 import { cacheDel, cacheGetJson, cacheIncr, cacheSetJson,cacheSetNx } from '../utils/cache';
 import {moderationNotice} from '../models/repositories/moderation.repo';
+import {pageQuery} from '../domain/pagination';
+import {boundedText,positiveId} from '../domain/validation';
 
 const BOOK_TTL = 60;      // seconds
 const CHAPTER_TTL = 60;   // seconds
@@ -22,11 +24,11 @@ const slugify = (s: string) =>
     .replace(/\s+/g, '-')
     .replace(/-+/g, '-');
 
-export const listBooksPublic = async (q: { query?: string; page?: any; limit?: any }) => {
-  const page = Math.max(1, Number(q.page ?? 1));
-  const limit = Math.min(50, Math.max(1, Number(q.limit ?? 20)));
+export const listBooksPublic = async (q: Record<string,unknown>) => {
+  const {page,limit,query}=pageQuery(q),genre=boundedText(q.genre??'','Genre filter',255,false),tag=boundedText(q.tag??'','Tag filter',100,false);
+  const sort=q.sort??'recent';if(sort!=='recent'&&sort!=='popular'&&sort!=='updated')throw new BadRequestError('Invalid story ordering');
 
-  const { items, total } = await bookRepo.listBooksPublic({ query: q.query, page, limit });
+  const { items, total } = await bookRepo.listBooksPublic({ query, page, limit,genre,tag,sort });
 
   return {
     page,
@@ -36,6 +38,7 @@ export const listBooksPublic = async (q: { query?: string; page?: any; limit?: a
       id: b.id,
       slug: b.slug,
       title: b.title,
+      genre:b.genre,authorId:b.authorId,visibility:b.visibility,
       synopsis: b.synopsis,
       coverUrl: b.coverUrl,
       authorName: b.authorName,
@@ -197,12 +200,11 @@ export const listBooksByAuthorPublic = async (q: {
   page?: any;
   limit?: any;
 }) => {
-  const page = Math.max(1, Number(q.page ?? 1));
-  const limit = Math.min(50, Math.max(1, Number(q.limit ?? 20)));
+  const {page,limit,query}=pageQuery(q);
 
   const { items, total } = await bookRepo.listBooksByAuthorPublic({
-    authorId: Number(q.authorId),
-    query: q.query,
+    authorId: positiveId(q.authorId,'author'),
+    query,
     page,
     limit,
   });
@@ -215,6 +217,7 @@ export const listBooksByAuthorPublic = async (q: {
       id: b.id,
       slug: b.slug,
       title: b.title,
+      genre:b.genre,authorId:b.authorId,viewsCount:Number(b.viewsCount??0),
       synopsis: b.synopsis,
       coverUrl: b.coverUrl,
       authorName: b.authorName,

@@ -12,8 +12,8 @@ The platform is **not release ready**. This is a living implementation record, s
 | Author memberships and entitlement policy | MERGED | `feat/author-memberships`: `17a6350`; merge `d55593e`; both remotes verified. 63 backend / 12 frontend tests and seven headed journeys passed, including optional-auth restoration and outage recovery. Actual conversations are a later dependency. |
 | Payments and donations | MERGED | `feat/payment-donations`: `8921b5a`; merge `1359447`; both remotes verified. 78 backend / 12 frontend tests and eight headed journeys passed at merge. Live Stripe sandbox UNVERIFIED: missing credentials. |
 | Member chat | MERGED | `feat/member-chat`: `a36e970`; merge `2e64620`; both remotes verified. 87 backend / 12 frontend tests and nine headed journeys at merge. Single-backend-instance delivery; no offline durable composer. |
-| Admin moderation | VERIFIED | `feat/admin-moderation`: independent visibility flags, reports, account suspension/session revocation, versioned settings/reviews, audit, actual statistics and admin UI. 97 backend / 12 frontend tests and all ten headed journeys passed; delayed-preview focused regression also passed. Types/lint/builds pass. |
-| Reader discovery and library | Pending | Real catalog, profiles/posts, follow/bookmark/history flows |
+| Admin moderation | MERGED | `feat/admin-moderation`: independent visibility flags, reports, account suspension/session revocation, versioned settings/reviews, audit, actual statistics and admin UI. 97 backend / 12 frontend tests and all ten headed journeys passed; delayed-preview focused regression also passed. Types/lint/builds pass. |
+| Reader discovery and library | VERIFIED | Real catalog, profiles, follows/bookmarks and synchronized reading history; 109 backend / 15 frontend tests and twelve headed journeys pass. Post spoilers/artwork remain a separate milestone. |
 | Operations and API documentation | Pending | Readiness, Redis failure handling, OpenAPI, reproducible application containers |
 | UI and release verification | Pending | Integrated journeys, accessibility, responsive browser evidence and final root README |
 
